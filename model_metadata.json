@@ -1,0 +1,59 @@
+{
+    "model_type": "sklearn.ensemble.RandomForestClassifier",
+    "input_features": [
+        "peak_swing_flexion",
+        "flexion_rom",
+        "stance_to_swing_ratio",
+        "mean_angular_velocity"
+    ],
+    "feature_order": [
+        "peak_swing_flexion",
+        "flexion_rom",
+        "stance_to_swing_ratio",
+        "mean_angular_velocity"
+    ],
+    "target_column": "target",
+    "class_names": [
+        "HIGH_KOA_RISK",
+        "NORMAL_GAIT"
+    ],
+    "class_encoding": {
+        "HIGH_KOA_RISK": 0,
+        "NORMAL_GAIT": 1
+    },
+    "random_seed": 42,
+    "train_test_split": {
+        "test_size": 0.2,
+        "train_size": 0.8,
+        "stratified": true,
+        "train_samples": 16000,
+        "test_samples": 4000
+    },
+    "hyperparameters": {
+        "n_estimators": 200,
+        "max_depth": 8,
+        "min_samples_split": 5,
+        "min_samples_leaf": 2,
+        "random_state": 42
+    },
+    "dataset_metadata": {
+        "filename": "data.csv",
+        "total_rows": 20000,
+        "schema": [
+            "peak_swing_flexion",
+            "flexion_rom",
+            "stance_to_swing_ratio",
+            "mean_angular_velocity",
+            "target"
+        ],
+        "normal_gait_count": 5181,
+        "high_koa_risk_count": 14819
+    },
+    "metrics": {
+        "test_accuracy": 0.97275,
+        "balanced_accuracy": 0.9643462867147078,
+        "macro_f1": 0.9644921039316118,
+        "weighted_f1": 0.9727457190792802
+    },
+    "synthetic_data_warning": "Model trained exclusively on synthetic kinematic stride cycles generated from biomechanical assumptions. Does not establish clinical diagnostic efficacy in uncalibrated patient populations."
+}
