@@ -19,8 +19,11 @@
    6. `target` (ground truth clinical class label)
 3. **Compact Edge-Optimized Random Forest**:
    - 20 decision trees, maximum depth 5 (~40 KB model size, < 50 µs host latency).
-4. **Embedded C Deployment**:
-   - Zero-dependency C/C++ header (`model_data.h`) supporting both floating-point and `int16_t` fixed-point inference on ESP32.
+4. **Embedded C Deployment & Streaming FIFO Processor**:
+   - Zero-dependency C/C++ header (`model_data.h`) containing:
+     - 50 Hz circular FIFO ring buffer and online heel-strike event segmenter.
+     - Automated calculation of the 5 canonical features per detected stride.
+     - Direct on-device Random Forest inference (supporting both floating-point and `int16_t` fixed-point).
 5. **Interactive Jupyter Notebook**:
    - Fully documented, pre-executed 23-section notebook (`KneeGait_RandomForest_Training.ipynb`) with all tables, evaluation metrics, and plots pre-rendered.
 
@@ -44,7 +47,7 @@ Open [`KneeGait_RandomForest_Training.ipynb`](KneeGait_RandomForest_Training.ipy
 jupyter notebook KneeGait_RandomForest_Training.ipynb
 ```
 
-The 23-section notebook documents:
+The 22-section notebook documents:
 - Exploratory data analysis, 5-feature distributions, and class frequencies.
 - Pearson correlation analysis among features (including $r \approx 0.99$ kinematics).
 - Verification of zero data leakage and 100% agreement with the $49.4^\circ$ and $45.0^\circ$ clinical boundary policy.
@@ -67,9 +70,47 @@ python train_model.py
 ```
 *Trains the 20-tree, max-depth 5 Random Forest and exports:*
 - `random_forest_model.joblib` (Trained model)
-- `model_data.h` (Zero-dependency C header for ESP32)
+- `model_data.h` (Zero-dependency C header for ESP32 with streaming FIFO & classifier)
 - `model.json` (Decision tree structure for parity validation)
 - `model_metadata.json` (Hyperparameters and evaluation metrics)
+
+---
+
+## ⚡ ESP32 Hardware Streaming Integration
+
+Directly process continuous 50 Hz samples from IMU hardware in C / C++ using the built-in streaming FIFO:
+
+```c
+#include "model_data.h"
+
+kneegait_pipeline_t pipeline;
+
+void setup() {
+    Serial.begin(115200);
+    kneegait_pipeline_init(&pipeline);
+}
+
+void loop() {
+    // 1. Read hardware sensors at 50 Hz (every 20 ms)
+    float t_sec = millis() / 1000.0f;
+    float knee_flexion = read_imu_knee_flexion(); // sagittal knee angle (deg)
+    float accel_z = read_shank_accel_z();         // vertical impact (g)
+
+    // 2. Feed directly into continuous streaming FIFO
+    kneegait_stride_result_t result;
+    if (kneegait_process_sample(&pipeline, t_sec, knee_flexion, accel_z, &result)) {
+        // Complete stride detected, segmented, and classified!
+        Serial.printf("Stride #%u: Class %d (%s) | Peak Flexion: %.1f deg | Cadence: %.1f spm\n",
+                      result.stride_count,
+                      result.class_id,
+                      result.display_label,
+                      result.features[FEAT_PEAK_SWING_FLEXION],
+                      result.cadence_spm);
+    }
+
+    delay(20); // 50 Hz sampling interval
+}
+```
 
 ---
 

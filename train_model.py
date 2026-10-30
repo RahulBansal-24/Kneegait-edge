@@ -218,6 +218,261 @@ static inline const char* kneegait_get_display_label(int class_id) {
     }
 }
 
+/* =========================================================================
+ * CONTINUOUS STREAMING FIFO BUFFER & ON-DEVICE STRIDE PROCESSOR
+ * ========================================================================= */
+
+#define KNEEGAIT_FIFO_CAPACITY         150    // ~3.0s buffer at 50Hz (fits 0.55s - 2.4s strides)
+#define KNEEGAIT_MIN_STRIDE_S          0.55f  // Min duration (cadence <= 218 spm)
+#define KNEEGAIT_MAX_STRIDE_S          2.40f  // Max duration (cadence >= 50 spm)
+#define KNEEGAIT_REFRACTORY_S          0.40f  // Refractory deadtime after foot strike (prevents bounce)
+#define KNEEGAIT_IMPACT_THRESHOLD_G    1.45f  // Shank deceleration impact threshold for heel strike
+#define KNEEGAIT_STALE_TIMEOUT_S       2.00f  // Gap threshold to auto-reset FIFO buffer
+
+/**
+ * @brief Raw timestamped IMU sample from hardware.
+ */
+typedef struct {
+    float t;            // Timestamp in seconds
+    float flexion;      // Knee joint sagittal flexion angle (degrees)
+    float ang_vel;      // Angular velocity (deg/s)
+    float accel_z;      // Shank vertical acceleration (g)
+} kneegait_sample_t;
+
+/**
+ * @brief Segmented stride classification event output.
+ */
+typedef struct {
+    int has_stride;                         // 1 if a stride was completed and classified, 0 otherwise
+    int class_id;                           // 0: NORMAL, 1: MILD, 2: SEVERE
+    const char* class_name;                 // "NORMAL_GAIT", etc.
+    const char* display_label;              // "Normal / Healthy", etc.
+    float features[KNEEGAIT_NUM_FEATURES];  // Canonical 5 features
+    float stride_duration_s;                // Duration of completed stride in seconds
+    float cadence_spm;                      // Step cadence in steps/min
+    uint32_t stride_count;                  // Total valid strides detected
+} kneegait_stride_result_t;
+
+/**
+ * @brief Continuous streaming FIFO pipeline state.
+ */
+typedef struct {
+    kneegait_sample_t buffer[KNEEGAIT_FIFO_CAPACITY];
+    int head;                               // Circular buffer write index
+    int count;                              // Current number of samples in FIFO
+    float last_sample_t;                    // Timestamp of previous sample
+    float last_hs_t;                        // Timestamp of last detected heel-strike
+    int has_first_hs;                       // Flag indicating initial heel-strike established
+    uint32_t total_strides;                 // Running counter of segmented strides
+} kneegait_pipeline_t;
+
+/**
+ * @brief Initializes or resets the continuous streaming FIFO pipeline.
+ */
+static inline void kneegait_pipeline_init(kneegait_pipeline_t* pipe) {
+    if (!pipe) return;
+    pipe->head = 0;
+    pipe->count = 0;
+    pipe->last_sample_t = -1.0f;
+    pipe->last_hs_t = -1.0f;
+    pipe->has_first_hs = 0;
+    pipe->total_strides = 0;
+}
+
+/**
+ * @brief Processes a single continuous hardware sample at 50Hz.
+ * 
+ * Ingests raw hardware readings into the internal FIFO ring buffer, tracks
+ * gait cycle events (heel-strike impact / terminal extension), segments valid
+ * complete strides, computes the 5 canonical features, and executes inference.
+ * 
+ * @param pipe Pointer to active pipeline state.
+ * @param t_sec Sample timestamp in seconds.
+ * @param knee_flexion Sagittal knee flexion in degrees.
+ * @param accel_z Shank vertical acceleration in g (pass 0.0f if uninstrumented).
+ * @param out_result Output struct populated when a full stride cycle completes.
+ * @return 1 if a stride was completed and classified, 0 if still buffering.
+ */
+static inline int kneegait_process_sample(
+    kneegait_pipeline_t* pipe,
+    float t_sec,
+    float knee_flexion,
+    float accel_z,
+    kneegait_stride_result_t* out_result
+) {
+    if (!pipe || !out_result) return 0;
+    out_result->has_stride = 0;
+
+    // Check for timestamps going backward or duplicate
+    if (pipe->last_sample_t >= 0.0f) {
+        float dt = t_sec - pipe->last_sample_t;
+        if (dt <= 0.0f) {
+            return 0; // Ignore duplicate or out-of-order sample
+        }
+        // If data stream was interrupted (> 2s), reset buffer
+        if (dt > KNEEGAIT_STALE_TIMEOUT_S) {
+            kneegait_pipeline_init(pipe);
+        }
+    }
+
+    // Estimate angular velocity from previous sample in FIFO if available
+    float ang_vel = 0.0f;
+    if (pipe->count > 0) {
+        int prev_idx = (pipe->head - 1 + KNEEGAIT_FIFO_CAPACITY) % KNEEGAIT_FIFO_CAPACITY;
+        float dt = t_sec - pipe->buffer[prev_idx].t;
+        if (dt > 0.0001f) {
+            ang_vel = (knee_flexion - pipe->buffer[prev_idx].flexion) / dt;
+        }
+    }
+
+    // Push new sample into circular FIFO
+    pipe->buffer[pipe->head].t = t_sec;
+    pipe->buffer[pipe->head].flexion = knee_flexion;
+    pipe->buffer[pipe->head].ang_vel = ang_vel;
+    pipe->buffer[pipe->head].accel_z = accel_z;
+
+    pipe->head = (pipe->head + 1) % KNEEGAIT_FIFO_CAPACITY;
+    if (pipe->count < KNEEGAIT_FIFO_CAPACITY) {
+        pipe->count++;
+    }
+    pipe->last_sample_t = t_sec;
+
+    // Detect Heel-Strike (Initial Contact):
+    // 1. Primary: Shank deceleration impact spike (accel_z >= 1.45g)
+    // 2. Fallback (if accel_z unmeasured): Local minimum of flexion (< 15.0 deg) after swing
+    int is_heel_strike = 0;
+    if (accel_z >= KNEEGAIT_IMPACT_THRESHOLD_G) {
+        is_heel_strike = 1;
+    } else if (accel_z <= 0.0f && pipe->count >= 3) {
+        int i1 = (pipe->head - 1 + KNEEGAIT_FIFO_CAPACITY) % KNEEGAIT_FIFO_CAPACITY;
+        int i2 = (pipe->head - 2 + KNEEGAIT_FIFO_CAPACITY) % KNEEGAIT_FIFO_CAPACITY;
+        int i3 = (pipe->head - 3 + KNEEGAIT_FIFO_CAPACITY) % KNEEGAIT_FIFO_CAPACITY;
+        if (pipe->buffer[i2].flexion < 15.0f &&
+            pipe->buffer[i2].flexion <= pipe->buffer[i3].flexion &&
+            pipe->buffer[i2].flexion <= pipe->buffer[i1].flexion) {
+            is_heel_strike = 1;
+        }
+    }
+
+    if (!is_heel_strike) {
+        return 0;
+    }
+
+    // Apply refractory period (prevent bounce double-triggering)
+    if (pipe->has_first_hs && (t_sec - pipe->last_hs_t) < KNEEGAIT_REFRACTORY_S) {
+        return 0;
+    }
+
+    // If first heel-strike, establish baseline and wait for second heel-strike
+    if (!pipe->has_first_hs) {
+        pipe->has_first_hs = 1;
+        pipe->last_hs_t = t_sec;
+        return 0;
+    }
+
+    // Second heel-strike detected: complete stride candidate
+    float stride_dur = t_sec - pipe->last_hs_t;
+
+    // Check physiological duration bounds [0.55s, 2.40s]
+    if (stride_dur < KNEEGAIT_MIN_STRIDE_S || stride_dur > KNEEGAIT_MAX_STRIDE_S) {
+        // Invalid duration: reset baseline to current foot strike
+        pipe->last_hs_t = t_sec;
+        return 0;
+    }
+
+    // Extract 5 canonical features across the stride interval [last_hs_t, t_sec]
+    float max_flex = -999.0f;
+    float min_flex = 999.0f;
+    float max_ang_vel = 0.0f;
+    float toe_off_t = pipe->last_hs_t + (0.60f * stride_dur); // Default ~60% stance phase
+
+    int n_stride_samples = 0;
+    float valley_min = 999.0f;
+    float valley_t = toe_off_t;
+
+    // Iterate through FIFO to inspect stride samples
+    for (int i = 0; i < pipe->count; ++i) {
+        int idx = (pipe->head - 1 - i + KNEEGAIT_FIFO_CAPACITY) % KNEEGAIT_FIFO_CAPACITY;
+        float st = pipe->buffer[idx].t;
+        if (st < pipe->last_hs_t) break;
+        if (st > t_sec) continue;
+
+        float flex = pipe->buffer[idx].flexion;
+        float vel = fabsf(pipe->buffer[idx].ang_vel);
+
+        if (flex > max_flex) max_flex = flex;
+        if (flex < min_flex) min_flex = flex;
+        if (vel > max_ang_vel) max_ang_vel = vel;
+
+        // Track inflection for toe-off (local minimum between 40% and 70% phase)
+        float phase = (st - pipe->last_hs_t) / stride_dur;
+        if (phase >= 0.40f && phase <= 0.70f) {
+            if (flex < valley_min) {
+                valley_min = flex;
+                valley_t = st;
+            }
+        }
+        n_stride_samples++;
+    }
+
+    if (n_stride_samples < 5) {
+        pipe->last_hs_t = t_sec;
+        return 0;
+    }
+
+    if (valley_min < 990.0f) {
+        toe_off_t = valley_t;
+    }
+
+    float t_stance = toe_off_t - pipe->last_hs_t;
+    float t_swing = t_sec - toe_off_t;
+    if (t_stance <= 0.05f) t_stance = 0.60f * stride_dur;
+    if (t_swing <= 0.05f) t_swing = 0.40f * stride_dur;
+
+    float stance_to_swing = t_stance / t_swing;
+    if (stance_to_swing < 1.0f) stance_to_swing = 1.0f;
+    if (stance_to_swing > 3.0f) stance_to_swing = 3.0f;
+
+    float cadence_spm = 2.0f * (60.0f / stride_dur);
+
+    // Populate Canonical Features
+    out_result->features[FEAT_PEAK_SWING_FLEXION]    = max_flex;
+    out_result->features[FEAT_SAGITTAL_ROM]          = max_flex - min_flex;
+    out_result->features[FEAT_STANCE_TO_SWING_RATIO] = stance_to_swing;
+    out_result->features[FEAT_PEAK_ANGULAR_VELOCITY] = max_ang_vel;
+    out_result->features[FEAT_CADENCE_SPM]           = cadence_spm;
+
+    // Run On-Device Random Forest Classifier Directly
+    int pred_class = kneegait_predict(out_result->features);
+    out_result->has_stride = 1;
+    out_result->class_id = pred_class;
+    out_result->class_name = kneegait_get_class_name(pred_class);
+    out_result->display_label = kneegait_get_display_label(pred_class);
+    out_result->stride_duration_s = stride_dur;
+    out_result->cadence_spm = cadence_spm;
+
+    pipe->total_strides++;
+    out_result->stride_count = pipe->total_strides;
+
+    // Advance stride window: current heel-strike becomes start of next stride
+    pipe->last_hs_t = t_sec;
+
+    return 1;
+}
+
+/**
+ * @brief Millisecond timestamp convenience wrapper for Arduino / ESP32.
+ */
+static inline int kneegait_process_sample_ms(
+    kneegait_pipeline_t* pipe,
+    uint32_t t_ms,
+    float knee_flexion,
+    float accel_z,
+    kneegait_stride_result_t* out_result
+) {
+    return kneegait_process_sample(pipe, (float)t_ms / 1000.0f, knee_flexion, accel_z, out_result);
+}
+
 #endif // KNEEGAIT_MODEL_DATA_H
 """)
 
