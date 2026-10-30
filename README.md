@@ -1,74 +1,91 @@
-# KneeGait-Edge: Wearable Gait Classification Pipeline
+# KneeGait-Edge: 3-Class Wearable Gait Pattern Classification Pipeline
 
-**KneeGait-Edge** is a low-cost wearable gait analysis project designed to screen for Knee Osteoarthritis (KOA) joint-stiffening impairment. Using dual 6-DOF IMUs (MPU-6050) on the thigh and shank, it tracks sagittal knee kinematics at 50Hz and classifies strides into **Normal Gait** (`NORMAL_GAIT`) or **High KOA Risk** (`HIGH_KOA_RISK`) using an edge-optimized Random Forest classifier.
+**KneeGait-Edge** is a low-cost, wearable biomechanical gait analysis system using an ESP32 microcontroller and dual 6-DOF IMUs (MPU-6050) attached to the distal lateral thigh and anteromedial shank. The wearable measures knee joint flexion at 50 Hz in the sagittal plane to screen for dynamic joint stiffness associated with Knee Osteoarthritis (KOA).
 
 ---
 
-## 🚀 Quick Start: Viewing the Pre-Trained Pipeline
+## 🌟 Key Architecture & Specifications
 
-> **Note:** The Random Forest model is **already fully trained**, and the Jupyter notebook is **pre-executed with all outputs and visual plots embedded**. You do not need to retrain or rerun anything to inspect the results.
+1. **3-Class Clinical Gait Impairment System**:
+   - **Class 0 (`NORMAL_GAIT`)**: Normal / Healthy ($\text{Peak Swing Flexion} \ge 49.4^\circ$)
+   - **Class 1 (`MILD_FUNCTIONAL_RESTRICTION`)**: Mild Restriction ($45.0^\circ \le \text{Peak Swing Flexion} < 49.4^\circ$)
+   - **Class 2 (`SEVERE_ANTALGIC_STIFF_GAIT`)**: Severe Antalgic / Stiff Gait ($\text{Peak Swing Flexion} < 45.0^\circ$)
+2. **Canonical 5-Feature Input Schema (6 Columns with `target`)**:
+   1. `peak_swing_flexion` (degrees)
+   2. `sagittal_rom` (degrees)
+   3. `stance_to_swing_ratio` (dimensionless ratio)
+   4. `peak_angular_velocity` (degrees/second)
+   5. `cadence_spm` (walking cadence in steps per minute)
+   6. `target` (ground truth clinical class label)
+3. **Compact Edge-Optimized Random Forest**:
+   - 20 decision trees, maximum depth 5 (~40 KB model size, < 50 µs host latency).
+4. **Embedded C Deployment**:
+   - Zero-dependency C/C++ header (`model_data.h`) supporting both floating-point and `int16_t` fixed-point inference on ESP32.
+5. **Interactive Jupyter Notebook**:
+   - Fully documented, pre-executed 23-section notebook (`KneeGait_RandomForest_Training.ipynb`) with all tables, evaluation metrics, and plots pre-rendered.
+
+---
+
+## 🚀 Quick Start & Viewing
+
+> **Note:** The compact 3-class model is **already trained**, and the notebook is **pre-executed with all outputs, evaluation tables, and visual plots rendered**. You do not need to retrain or rerun anything to inspect the results.
 
 ### 1. Installation
-
-Clone this repository and install the minimal runtime dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. View the Notebook
+### 2. View the Jupyter Notebook
 
 Open [`KneeGait_RandomForest_Training.ipynb`](KneeGait_RandomForest_Training.ipynb) in **VS Code**, **JupyterLab**, or directly on **GitHub**:
 
 ```bash
-# If using Jupyter:
 jupyter notebook KneeGait_RandomForest_Training.ipynb
 ```
 
-The notebook displays the complete end-to-end workflow:
-- **Exploratory Data Analysis:** Feature distributions and kernel density plots comparing normal vs. stiff gait across all 20,000 strides.
-- **Correlation Heatmap:** Kinematic relationships among peak flexion, sagittal ROM, stance-to-swing ratio, and angular velocity.
-- **Evaluation Metrics:** Pre-computed **~97.3% test accuracy** and **~96.4% balanced accuracy** across a held-out test split of 4,000 strides.
-- **Visual Diagnostics:** Pre-rendered annotated **Confusion Matrix** and Gini **Feature Importance** bar charts.
-- **Inference Verification:** Interactive test predictions on sample strides with class probabilities.
+The 23-section notebook documents:
+- Exploratory data analysis, 5-feature distributions, and class frequencies.
+- Pearson correlation analysis among features (including $r \approx 0.99$ kinematics).
+- Verification of zero data leakage and 100% agreement with the $49.4^\circ$ and $45.0^\circ$ clinical boundary policy.
+- Stratified 80/20 train/test evaluation metrics, confusion matrix, and Gini feature importances.
+- Prediction parity tests between Python scikit-learn, C header, and browser JSON models.
 
 ---
 
-## 🛠️ Optional: Regenerating Data & Retraining
+## 🛠️ Execution Commands
 
-If you want to regenerate the dataset from scratch or retrain the model locally:
+### 1. Regenerate Synthetic Dataset (20,000 Records, 6 Columns)
+```bash
+python generate_data.py
+```
+*Generates `data.csv` with exactly 20,000 rows adhering to physical kinematic constraints and clinical boundary thresholds.*
 
-1. **Regenerate Synthetic Dataset (20,000 records):**
-   ```bash
-   python generate_data.py
-   ```
-   *Creates `data.csv` and `data_validation_report.txt`.*
-
-2. **Retrain the Random Forest Classifier:**
-   ```bash
-   python train_model.py
-   ```
-   *Evaluates the model, updates `random_forest_model.joblib`, and updates `model_metadata.json`.*
+### 2. Retrain Model & Export Artifacts
+```bash
+python train_model.py
+```
+*Trains the 20-tree, max-depth 5 Random Forest and exports:*
+- `random_forest_model.joblib` (Trained model)
+- `model_data.h` (Zero-dependency C header for ESP32)
+- `model.json` (Decision tree structure for parity validation)
+- `model_metadata.json` (Hyperparameters and evaluation metrics)
 
 ---
 
 ## 📁 Repository Structure
 
-| File | Description |
-| :--- | :--- |
-| [`KneeGait_RandomForest_Training.ipynb`](KneeGait_RandomForest_Training.ipynb) | Complete 16-section Jupyter notebook with saved outputs and visualizations. |
-| [`data.csv`](data.csv) | Final 20,000-row validated synthetic gait dataset (4 inputs + 1 target). |
-| [`random_forest_model.joblib`](random_forest_model.joblib) | Pre-trained scikit-learn Random Forest model artifact. |
-| [`model_metadata.json`](model_metadata.json) | Specification sheet: feature ordering, hyperparameters, class encodings, and metrics. |
-| [`generate_data.py`](generate_data.py) | Standalone synthetic data generation script enforcing biomechanical constraints. |
-| [`train_model.py`](train_model.py) | Standalone model training, stratified evaluation, and serialization script. |
-| [`data_validation_report.txt`](data_validation_report.txt) | Detailed verification report on dataset constraints, distributions, and bounds. |
-| [`evaluation_report.txt`](evaluation_report.txt) | Full text evaluation report with per-class precision, recall, and confusion matrix. |
-| [`requirements.txt`](requirements.txt) | Minimal Python package dependencies. |
-| [`.gitignore`](.gitignore) | Excludes temporary build files and intermediate export artifacts. |
-
----
-
-## ⚠️ Scientific & Clinical Disclaimer
-
-The dataset and model presented here are synthetic engineering prototypes developed from biomechanical equations and illustrative clinical literature (PMC4037512). They demonstrate the feasibility of edge-AI gait screening and do not constitute clinically certified diagnostic software.
+```text
+kneegait-edge/
+├── data.csv                             # 20,000-row 5-feature 3-class dataset (6 columns)
+├── generate_data.py                     # Synthetic data generation script
+├── train_model.py                       # Model training and artifact export script
+├── random_forest_model.joblib           # Trained compact Random Forest model
+├── model_data.h                         # ESP32 C header (float & int16 fixed-point)
+├── model.json                           # JSON tree structure for browser/parity
+├── model_metadata.json                  # Model metadata, metrics, and parameters
+├── KneeGait_RandomForest_Training.ipynb # 23-section pre-rendered Jupyter notebook
+├── requirements.txt                     # Minimal Python dependencies
+├── .gitignore                           # Git ignore rules
+└── README.md                            # Project documentation
+```

@@ -1,32 +1,20 @@
 """
-generate_data.py — KneeGait-Edge Synthetic Data Generation & Validation Script
+generate_data.py — KneeGait-Edge 5-Feature 3-Class Synthetic Data Generator
 
-This script generates 20,000 synthetic gait-stride records for the KneeGait-Edge project.
-The feature schema, physical equations, and classification targets are derived directly
-from the 'KneeGait-Edge Master Engineering Blueprint' and informed by the observed
-distributions in 'real_patient_strides_dataset.csv'.
+Generates exactly 20,000 synthetic gait-stride records under physiological and
+mathematical constraints, strictly implementing the 3-class KneeGait-Edge labeling policy:
 
-Key Engineering & Modeling Decisions:
-1. Feature Schema (4 inputs + 1 target):
-   - peak_swing_flexion (deg): Peak knee flexion achieved in sagittal swing phase.
-   - flexion_rom (deg): Sagittal knee Range of Motion (peak_swing_flexion - min_flexion).
-   - stance_to_swing_ratio (unitless): Ratio of stance duration to swing duration.
-   - mean_angular_velocity (deg/s): Mean joint angular speed across the stride cycle.
-   - target (categorical): 'NORMAL_GAIT' (0) or 'HIGH_KOA_RISK' (1).
+- Class 0 (NORMAL_GAIT): Peak_Swing_Flexion >= 49.4°
+- Class 1 (MILD_FUNCTIONAL_RESTRICTION): 45.0° <= Peak_Swing_Flexion < 49.4°
+- Class 2 (SEVERE_ANTALGIC_STIFF_GAIT): Peak_Swing_Flexion < 45.0°
 
-2. Class Mapping & Allocation (Inspried by 332-record source audit):
-   - HEALTHY (52 strides, 15.66%) + MILD_RESTRICTION (34 strides, 10.24%) -> NORMAL_GAIT (86 / 332 = 25.90%)
-   - SEVERE_KOA_STIFF_GAIT (246 strides, 74.10%) -> HIGH_KOA_RISK (246 / 332 = 74.10%)
-   - Mild restriction represents sub-threshold joint stiffness (peak flexion >= 45.0°)
-     and is NOT equivalent to clinically diagnosed severe KOA stiff gait (< 45.0°).
-   - Target row allocation: 5,181 NORMAL_GAIT (25.905%) and 14,819 HIGH_KOA_RISK (74.095%).
-   - Total rows: Exactly 20,000 rows.
-
-3. Biomechanical Relationships & Mathematical Constraints:
-   - ROM Excursion Rule: 0 < flexion_rom < peak_swing_flexion (residual stance flexion >= 0.5°).
-   - Positive Ratios & Speeds: stance_to_swing_ratio > 0, mean_angular_velocity > 0.
-   - Constrained multivariate generation with rejection sampling (no boundary clipping artifacts).
-   - Realistic class overlap matching published literature (PMC4037512).
+Canonical 6-Column Output Schema (5 Input Features + 1 Classification Target):
+1. peak_swing_flexion     (deg)       : Maximum knee flexion during sagittal swing
+2. sagittal_rom           (deg)       : Sagittal knee Range of Motion across stride
+3. stance_to_swing_ratio  (ratio)     : Stance duration / Swing duration
+4. peak_angular_velocity  (deg/s)     : Peak sagittal knee angular speed
+5. cadence_spm            (steps/min) : Walking cadence in steps per minute
+6. target                 (string)    : Gait impairment classification label
 """
 
 import os
@@ -34,32 +22,42 @@ import sys
 import numpy as np
 import pandas as pd
 
+# Canonical feature list
+FEATURE_NAMES = [
+    "peak_swing_flexion",
+    "sagittal_rom",
+    "stance_to_swing_ratio",
+    "peak_angular_velocity",
+    "cadence_spm"
+]
 
-def audit_source_dataset(csv_path: str) -> dict:
-    """Audits the reference CSV to extract observed counts, proportions, and anomalies."""
-    if not os.path.exists(csv_path):
-        return {"exists": False}
+OUTPUT_COLUMNS = FEATURE_NAMES + ["target"]
 
-    df = pd.read_csv(csv_path)
-    total_rows = len(df)
-    class_counts = df['clinical_diagnosis'].value_counts().to_dict()
-    class_props = {k: v / total_rows for k, v in class_counts.items()}
+# Class definitions
+CLASS_NORMAL = 0
+CLASS_MILD = 1
+CLASS_SEVERE = 2
 
-    # Check anomalies
-    ratio_50_count = int((df['stance_to_swing_ratio'] == 50.0).sum())
-    cadence_repeat_count = int((df['cadence_spm'] == 61.2).sum())
+CLASS_NAMES = {
+    CLASS_NORMAL: "NORMAL_GAIT",
+    CLASS_MILD: "MILD_FUNCTIONAL_RESTRICTION",
+    CLASS_SEVERE: "SEVERE_ANTALGIC_STIFF_GAIT"
+}
 
-    return {
-        "exists": True,
-        "total_rows": total_rows,
-        "columns": df.columns.tolist(),
-        "class_counts": class_counts,
-        "class_props": class_props,
-        "anomalies": {
-            "stance_to_swing_ratio_pegged_at_50": ratio_50_count,
-            "cadence_spm_pegged_at_61_2": cadence_repeat_count
-        }
-    }
+# Threshold boundaries
+FLEXION_BOUNDARY_NORMAL_MILD = 49.4
+FLEXION_BOUNDARY_MILD_SEVERE = 45.0
+MIN_RESIDUAL_STANCE_FLEXION = 0.5
+
+
+def assign_flexion_class(peak_swing_flexion: float) -> int:
+    """Assigns 3-class gait impairment category based on peak swing flexion angle in degrees."""
+    val = float(peak_swing_flexion)
+    if val >= FLEXION_BOUNDARY_NORMAL_MILD:
+        return CLASS_NORMAL
+    elif val >= FLEXION_BOUNDARY_MILD_SEVERE:
+        return CLASS_MILD
+    return CLASS_SEVERE
 
 
 def build_covariance_matrix(stds: list, corr_matrix: np.ndarray) -> np.ndarray:
@@ -68,367 +66,146 @@ def build_covariance_matrix(stds: list, corr_matrix: np.ndarray) -> np.ndarray:
     return D @ corr_matrix @ D
 
 
-def sample_stratum_with_constraints(
+def sample_class_stratum(
+    class_id: int,
     n_samples: int,
-    mean_vector: list,
-    cov_matrix: np.ndarray,
-    min_residual_flexion: float = 0.5,
-    rng: np.random.Generator = None
+    mean_vec: list,
+    stds_vec: list,
+    corr_matrix: np.ndarray,
+    rng: np.random.Generator
 ) -> np.ndarray:
-    """
-    Samples class-conditioned strides using multivariate Gaussian distribution
-    with strict physiological rejection sampling.
+    """Samples class-conditioned strides under strict physiological constraints and boundary rules."""
+    cov_matrix = build_covariance_matrix(stds_vec, corr_matrix)
+    valid_samples = []
+    max_batches = 30
+    batch_num = 0
 
-    Latent variables generated:
-    [0]: peak_swing_flexion
-    [1]: min_stance_flexion (residual flexion in stance)
-    [2]: stance_to_swing_ratio
-    [3]: mean_angular_velocity
+    while len(valid_samples) < n_samples and batch_num < max_batches:
+        batch_num += 1
+        needed = n_samples - len(valid_samples)
+        batch_size = max(int(needed * 1.5), 150)
+        raw = rng.multivariate_normal(mean_vec, cov_matrix, size=batch_size)
 
-    Derived variables:
-    flexion_rom = peak_swing_flexion - min_stance_flexion
-    Inherently guarantees: 0 < flexion_rom < peak_swing_flexion.
-    """
-    if rng is None:
-        rng = np.random.default_rng(42)
+        peak_flex = np.round(raw[:, 0], 2)
+        min_flex = np.round(raw[:, 1], 2)
+        ratio = np.round(raw[:, 2], 3)
+        ang_vel = np.round(raw[:, 3], 2)
+        cadence = np.round(raw[:, 4], 1)
+        rom = np.round(peak_flex - min_flex, 2)
 
-    valid_records = []
-    attempts = 0
-    max_attempts = 20
+        # Class boundary mask
+        if class_id == CLASS_NORMAL:
+            class_mask = (peak_flex >= FLEXION_BOUNDARY_NORMAL_MILD) & (peak_flex <= 80.0)
+        elif class_id == CLASS_MILD:
+            class_mask = (peak_flex >= FLEXION_BOUNDARY_MILD_SEVERE) & (peak_flex < FLEXION_BOUNDARY_NORMAL_MILD)
+        else: # CLASS_SEVERE
+            class_mask = (peak_flex >= 12.0) & (peak_flex < FLEXION_BOUNDARY_MILD_SEVERE)
 
-    while len(valid_records) < n_samples and attempts < max_attempts:
-        attempts += 1
-        needed = n_samples - len(valid_records)
-        batch_size = max(int(needed * 1.3), 100)
-        raw = rng.multivariate_normal(mean_vector, cov_matrix, size=batch_size)
-
-        peak_flex = raw[:, 0]
-        min_flex = raw[:, 1]
-        ratio = raw[:, 2]
-        vel = raw[:, 3]
-        rom = peak_flex - min_flex
-
-        # Mathematical and physiological constraints
-        valid_mask = (
-            (peak_flex >= 12.0) & (peak_flex <= 80.0) &
-            (min_flex >= min_residual_flexion) & (min_flex <= 25.0) &
-            (rom >= 8.0) & (rom < peak_flex) &
-            (ratio >= 1.0) & (ratio <= 3.5) &
-            (vel >= 25.0) & (vel <= 170.0)
+        # Physical and physiological constraints
+        phys_mask = (
+            (min_flex >= MIN_RESIDUAL_STANCE_FLEXION) & (min_flex <= 18.0) &
+            (rom >= 5.0) & (rom < peak_flex) &
+            (ratio >= 0.8) & (ratio <= 3.5) &
+            (ang_vel >= 30.0) & (ang_vel <= 400.0) &
+            (cadence >= 50.0) & (cadence <= 150.0)
         )
 
-        valid_data = np.column_stack([peak_flex[valid_mask], rom[valid_mask], ratio[valid_mask], vel[valid_mask]])
-        valid_records.extend(valid_data.tolist())
+        valid_mask = class_mask & phys_mask
+        candidates = np.column_stack([
+            peak_flex[valid_mask],
+            rom[valid_mask],
+            ratio[valid_mask],
+            ang_vel[valid_mask],
+            cadence[valid_mask]
+        ])
 
-    if len(valid_records) < n_samples:
-        raise RuntimeError(f"Rejection sampling could not satisfy constraints within {max_attempts} iterations.")
+        valid_samples.extend(candidates.tolist())
 
-    return np.array(valid_records[:n_samples])
+    if len(valid_samples) < n_samples:
+        raise RuntimeError(f"Could not generate {n_samples} valid rows for class {class_id}.")
+
+    return np.array(valid_samples[:n_samples])
 
 
 def generate_synthetic_dataset(
-    total_records: int = 20000,
+    total_rows: int = 20000,
     random_seed: int = 42
-) -> tuple[pd.DataFrame, pd.DataFrame, str]:
-    """
-    Generates 20,000 synthetic gait records conditioned on 3 physiological strata,
-    mapped to the blueprint's binary classification schema.
-    """
+) -> pd.DataFrame:
+    """Generates 20,000 synthetic records with exact class allocations and 6 canonical columns."""
     rng = np.random.default_rng(random_seed)
 
-    # Correlation template among [peak_flexion, min_flexion, stance_swing_ratio, mean_angular_velocity]
-    # Biomechanical relationships:
-    # - Higher peak flexion strongly associates with higher angular velocity (+0.75)
-    # - Higher peak flexion moderately associates with lower stance ratio (-0.65)
-    # - Higher stance ratio associates with lower angular velocity (-0.60)
+    # Correlation template among [peak_flex, min_flex, ratio, peak_ang_vel, cadence]
     corr_template = np.array([
-        [ 1.00,  0.22, -0.65,  0.75],
-        [ 0.22,  1.00, -0.15,  0.10],
-        [-0.65, -0.15,  1.00, -0.60],
-        [ 0.75,  0.10, -0.60,  1.00]
+        [ 1.00,  0.20, -0.62,  0.72,  0.55],
+        [ 0.20,  1.00, -0.12,  0.10,  0.05],
+        [-0.62, -0.12,  1.00, -0.58, -0.50],
+        [ 0.72,  0.10, -0.58,  1.00,  0.48],
+        [ 0.55,  0.05, -0.50,  0.48,  1.00],
     ])
 
-    # Stratum 1: HEALTHY (Observed proportion 52/332 = 15.66%)
-    # Target rows = round(20000 * (52 / 332)) = 3,133
-    n_healthy = 3133
-    mean_h = [60.0, 2.5, 1.45, 120.0]  # Blueprint Section 10: Peak 60.0, ROM ~57.5, Ratio 1.45, Vel 120.0
-    stds_h = [4.0, 0.9, 0.11, 10.0]
-    cov_h = build_covariance_matrix(stds_h, corr_template)
+    # Class row allocation (proportions: ~16.265% Normal, ~9.640% Mild, ~74.095% Severe)
+    n_normal = int(round(total_rows * 0.16265))
+    n_mild = int(round(total_rows * 0.09640))
+    n_severe = total_rows - n_normal - n_mild
+    assert n_normal + n_mild + n_severe == total_rows
 
-    # Stratum 2: MILD RESTRICTION (Observed proportion 34/332 = 10.24%)
-    # Sub-threshold stiffness (peak flexion 45-50°), target rows = 2,048
-    n_mild = 2048
-    mean_m = [47.5, 4.2, 1.65, 96.0]
-    stds_m = [3.2, 1.1, 0.13, 9.0]
-    cov_m = build_covariance_matrix(stds_m, corr_template)
+    # Stratum parameters
+    mean_normal = [58.0, 2.5, 1.45, 205.0, 105.0]
+    stds_normal = [4.0, 0.8, 0.11, 22.0, 8.0]
 
-    # Stratum 3: SEVERE KOA / STIFF GAIT (Observed proportion 246/332 = 74.10%)
-    # Pathological impairment (< 45.0°), target rows = 14,819
-    n_severe = 14819
-    mean_k = [36.5, 5.5, 1.85, 75.0]  # Blueprint Section 10: Peak 38.0, ROM ~31.0, Ratio 1.85, Vel 75.0
-    stds_k = [5.0, 1.5, 0.18, 9.0]
-    cov_k = build_covariance_matrix(stds_k, corr_template)
+    mean_mild = [47.2, 4.2, 1.65, 170.0, 95.0]
+    stds_mild = [1.2, 0.9, 0.12, 18.0, 8.0]
 
-    assert n_healthy + n_mild + n_severe == total_records, "Row counts must sum to exactly total_records"
+    mean_severe = [32.0, 5.5, 1.88, 105.0, 86.0]
+    stds_severe = [5.5, 1.4, 0.16, 25.0, 8.0]
 
-    h_data = sample_stratum_with_constraints(n_healthy, mean_h, cov_h, rng=rng)
-    m_data = sample_stratum_with_constraints(n_mild, mean_m, cov_m, rng=rng)
-    k_data = sample_stratum_with_constraints(n_severe, mean_k, cov_k, rng=rng)
+    data_normal = sample_class_stratum(CLASS_NORMAL, n_normal, mean_normal, stds_normal, corr_template, rng)
+    data_mild = sample_class_stratum(CLASS_MILD, n_mild, mean_mild, stds_mild, corr_template, rng)
+    data_severe = sample_class_stratum(CLASS_SEVERE, n_severe, mean_severe, stds_severe, corr_template, rng)
 
-    feature_cols = ['peak_swing_flexion', 'flexion_rom', 'stance_to_swing_ratio', 'mean_angular_velocity']
+    df_normal = pd.DataFrame(data_normal, columns=FEATURE_NAMES)
+    df_normal["target"] = CLASS_NAMES[CLASS_NORMAL]
 
-    df_h = pd.DataFrame(h_data, columns=feature_cols)
-    df_h['latent_stratum'] = 'HEALTHY'
-    df_h['target'] = 'NORMAL_GAIT'
+    df_mild = pd.DataFrame(data_mild, columns=FEATURE_NAMES)
+    df_mild["target"] = CLASS_NAMES[CLASS_MILD]
 
-    df_m = pd.DataFrame(m_data, columns=feature_cols)
-    df_m['latent_stratum'] = 'MILD_RESTRICTION'
-    df_m['target'] = 'NORMAL_GAIT'
+    df_severe = pd.DataFrame(data_severe, columns=FEATURE_NAMES)
+    df_severe["target"] = CLASS_NAMES[CLASS_SEVERE]
 
-    df_k = pd.DataFrame(k_data, columns=feature_cols)
-    df_k['latent_stratum'] = 'SEVERE_KOA_STIFF_GAIT'
-    df_k['target'] = 'HIGH_KOA_RISK'
+    df_combined = pd.concat([df_normal, df_mild, df_severe], ignore_index=True)
+    df_shuffled = df_combined.sample(frac=1.0, random_state=random_seed).reset_index(drop=True)
 
-    # Combine all strata
-    df_full = pd.concat([df_h, df_m, df_k], ignore_index=True)
+    # Verification against assigning rule
+    rule_classes = [assign_flexion_class(f) for f in df_shuffled["peak_swing_flexion"]]
+    target_classes = [
+        CLASS_NORMAL if t == CLASS_NAMES[CLASS_NORMAL]
+        else CLASS_MILD if t == CLASS_NAMES[CLASS_MILD]
+        else CLASS_SEVERE
+        for t in df_shuffled["target"]
+    ]
+    assert (np.array(rule_classes) == np.array(target_classes)).all(), "Rule verification failed!"
 
-    # Compute comprehensive class statistics for both latent strata and final binary classes
-    stats_rows = []
-    for grp_col, grp_name in [('latent_stratum', 'Latent Subgroups'), ('target', 'Binary Target Classes')]:
-        for cls_name, cls_df in df_full.groupby(grp_col):
-            row = {
-                'Grouping': grp_name,
-                'Class': cls_name,
-                'Count': len(cls_df),
-                'Percentage': round(len(cls_df) / total_records * 100, 3),
-                'Peak_Flexion_Mean': round(cls_df['peak_swing_flexion'].mean(), 2),
-                'Peak_Flexion_Std': round(cls_df['peak_swing_flexion'].std(), 2),
-                'Flexion_ROM_Mean': round(cls_df['flexion_rom'].mean(), 2),
-                'Flexion_ROM_Std': round(cls_df['flexion_rom'].std(), 2),
-                'Stance_Swing_Ratio_Mean': round(cls_df['stance_to_swing_ratio'].mean(), 3),
-                'Stance_Swing_Ratio_Std': round(cls_df['stance_to_swing_ratio'].std(), 3),
-                'Mean_Ang_Velocity_Mean': round(cls_df['mean_angular_velocity'].mean(), 2),
-                'Mean_Ang_Velocity_Std': round(cls_df['mean_angular_velocity'].std(), 2),
-            }
-            stats_rows.append(row)
-    df_stats = pd.DataFrame(stats_rows)
-
-    # Shuffle rows using fixed seed for realistic data ordering
-    df_final = df_full.sample(frac=1.0, random_state=random_seed).reset_index(drop=True)
-
-    # Retain strictly the blueprint model columns for data.csv
-    # Schema: 4 inputs + 1 target
-    final_cols = feature_cols + ['target']
-    df_output = df_final[final_cols].copy()
-
-    return df_output, df_stats, df_full
-
-
-def validate_dataset(df: pd.DataFrame) -> dict:
-    """Verifies all numeric, logical, and structural constraints."""
-    issues = []
-    
-    # 1. Row count
-    if len(df) != 20000:
-        issues.append(f"Row count mismatch: expected 20000, got {len(df)}")
-
-    # 2. Schema check
-    expected_cols = ['peak_swing_flexion', 'flexion_rom', 'stance_to_swing_ratio', 'mean_angular_velocity', 'target']
-    if df.columns.tolist() != expected_cols:
-        issues.append(f"Schema mismatch: expected {expected_cols}, got {df.columns.tolist()}")
-
-    # 3. Missing or infinite values
-    if df.isnull().sum().sum() > 0:
-        issues.append(f"Found {df.isnull().sum().sum()} null values")
-    num_cols = ['peak_swing_flexion', 'flexion_rom', 'stance_to_swing_ratio', 'mean_angular_velocity']
-    if not np.isfinite(df[num_cols].values).all():
-        issues.append("Found non-finite numeric values")
-
-    # 4. Target classes
-    valid_targets = {'NORMAL_GAIT', 'HIGH_KOA_RISK'}
-    found_targets = set(df['target'].unique())
-    if found_targets != valid_targets:
-        issues.append(f"Unexpected target classes: {found_targets}")
-
-    # 5. Class counts
-    normal_count = int((df['target'] == 'NORMAL_GAIT').sum())
-    koa_count = int((df['target'] == 'HIGH_KOA_RISK').sum())
-    if normal_count != 5181 or koa_count != 14819:
-        issues.append(f"Class count mismatch: NORMAL_GAIT={normal_count}, HIGH_KOA_RISK={koa_count}")
-
-    # 6. Physical constraints
-    rom_viol = int((df['flexion_rom'] >= df['peak_swing_flexion']).sum())
-    if rom_viol > 0:
-        issues.append(f"Constraint violation: {rom_viol} rows have flexion_rom >= peak_swing_flexion")
-
-    ratio_viol = int((df['stance_to_swing_ratio'] <= 0).sum())
-    if ratio_viol > 0:
-        issues.append(f"Constraint violation: {ratio_viol} rows have non-positive stance_to_swing_ratio")
-
-    vel_viol = int((df['mean_angular_velocity'] <= 0).sum())
-    if vel_viol > 0:
-        issues.append(f"Constraint violation: {vel_viol} rows have non-positive mean_angular_velocity")
-
-    # 7. Duplicates
-    dup_count = int(df.duplicated().sum())
-
-    # 8. Boundary concentrations (checking for repeated values like 50.0 in ratio)
-    ratio_top_mode = df['stance_to_swing_ratio'].value_counts().iloc[0]
-    if ratio_top_mode > 50:
-        issues.append(f"Suspicious boundary concentration in stance_to_swing_ratio: {ratio_top_mode} identical rows")
-
-    return {
-        "is_valid": len(issues) == 0,
-        "issues": issues,
-        "normal_count": normal_count,
-        "normal_pct": normal_count / len(df) * 100,
-        "koa_count": koa_count,
-        "koa_pct": koa_count / len(df) * 100,
-        "duplicates": dup_count,
-        "min_peak_rom_diff": float((df['peak_swing_flexion'] - df['flexion_rom']).min()),
-        "max_peak_rom_diff": float((df['peak_swing_flexion'] - df['flexion_rom']).max()),
-    }
-
-
-def write_validation_report(
-    report_path: str,
-    audit_info: dict,
-    val_info: dict,
-    df: pd.DataFrame,
-    df_stats: pd.DataFrame
-):
-    """Generates the comprehensive data_validation_report.txt."""
-    num_cols = ['peak_swing_flexion', 'flexion_rom', 'stance_to_swing_ratio', 'mean_angular_velocity']
-    corr = df[num_cols].corr()
-
-    with open(report_path, 'w', encoding='utf-8') as f:
-        f.write("=" * 80 + "\n")
-        f.write("KNEEGAT-EDGE SYNTHETIC DATASET GENERATION & VALIDATION REPORT\n")
-        f.write("=" * 80 + "\n\n")
-
-        f.write("1. EXECUTIVE SUMMARY & BLUEPRINT ALIGNMENT\n")
-        f.write("-" * 80 + "\n")
-        f.write("Dataset File: data.csv\n")
-        f.write(f"Total Rows: {len(df):,}\n")
-        f.write(f"Total Columns: {df.shape[1]} (4 model inputs + 1 classification target)\n")
-        f.write("Model Framework: Binary Classification ('NORMAL_GAIT' vs 'HIGH_KOA_RISK')\n")
-        f.write("Selected Schema: ['peak_swing_flexion', 'flexion_rom', 'stance_to_swing_ratio',\n")
-        f.write("                  'mean_angular_velocity', 'target']\n")
-        f.write("Random Seed: 42 (100% deterministic & reproducible)\n\n")
-
-        f.write("Rationale for Blueprint Decisions:\n")
-        f.write(" - Blueprint Section 10 explicitly specifies 4 inputs for the TinyML Random Forest:\n")
-        f.write("   [Peak_Swing_Flexion, Flexion_ROM, Stance_Swing_Ratio, Mean_Angular_Velocity]\n")
-        f.write(" - Blueprint defines binary classification: 0: Normal Gait, 1: High KOA Risk.\n")
-        f.write(" - Reference CSV columns 'stride_id' and 'cadence_spm' were excluded from model\n")
-        f.write("   training because stride_id is a row counter and cadence_spm was 90% unvarying\n")
-        f.write("   (pegged at 61.2 spm) and not required by the blueprint's TinyML specification.\n")
-        f.write(" - Blueprint requires 'mean_angular_velocity' (average joint speed across stride,\n")
-        f.write("   Healthy ~120 deg/s, KOA ~75 deg/s) rather than 'peak_angular_velocity' from the CSV.\n")
-        f.write("   This distinction was strictly respected.\n\n")
-
-        f.write("2. REFERENCE CSV AUDIT & OBSERVED ANOMALIES\n")
-        f.write("-" * 80 + "\n")
-        if audit_info["exists"]:
-            f.write(f"Reference File: real_patient_strides_dataset.csv ({audit_info['total_rows']} rows)\n")
-            f.write("Observed Distribution:\n")
-            for cls, cnt in audit_info["class_counts"].items():
-                f.write(f"  - {cls}: {cnt} strides ({audit_info['class_props'][cls]*100:.2f}%)\n")
-            f.write("Identified Artifacts in Reference CSV:\n")
-            f.write(f"  - stance_to_swing_ratio pegged at 50.00: {audit_info['anomalies']['stance_to_swing_ratio_pegged_at_50']} occurrences (firmware clamp).\n")
-            f.write(f"  - cadence_spm pegged at 61.2: {audit_info['anomalies']['cadence_spm_pegged_at_61_2']} occurrences.\n")
-            f.write("Resolution in Synthetic Generation:\n")
-            f.write("  - Avoided reproducing firmware clamping artifacts. Stance-to-swing ratio\n")
-            f.write("    was generated using physiologically validated distributions (1.10 - 2.50).\n\n")
-
-        f.write("3. CLASS MAPPING & PROPORTIONAL ALLOCATION\n")
-        f.write("-" * 80 + "\n")
-        f.write("Mapping from 3 Observed Strata to Binary Classification:\n")
-        f.write("  - HEALTHY (52 strides in CSV): Mapped to NORMAL_GAIT (Label 0)\n")
-        f.write("  - MILD_RESTRICTION (34 strides in CSV): Mapped to NORMAL_GAIT (Label 0)\n")
-        f.write("    * Clinical Justification: All 34 mild-restriction strides in the CSV have\n")
-        f.write("      peak swing flexion >= 45.09° (mean 47.22°). The blueprint's clinical threshold\n")
-        f.write("      for High KOA Risk is strictly < 45.0°. Mild functional restriction does NOT\n")
-        f.write("      constitute confirmed osteoarthritic stiff-gait pathology.\n")
-        f.write("  - SEVERE_KOA_STIFF_GAIT (246 strides in CSV): Mapped to HIGH_KOA_RISK (Label 1)\n\n")
-        f.write("Generated Class Counts:\n")
-        f.write(f"  - NORMAL_GAIT: {val_info['normal_count']:,} records ({val_info['normal_pct']:.3f}%)\n")
-        f.write(f"    * Latent Healthy stratum: 3,133 records (15.665%)\n")
-        f.write(f"    * Latent Mild Restriction stratum: 2,048 records (10.240%)\n")
-        f.write(f"  - HIGH_KOA_RISK: {val_info['koa_count']:,} records ({val_info['koa_pct']:.3f}%)\n")
-        f.write(f"    * Latent Severe KOA stratum: 14,819 records (74.095%)\n")
-        f.write(f"  - Total Generated Records: {len(df):,} (Exactly 20,000)\n\n")
-
-        f.write("4. MATHEMATICAL & BIOMECHANICAL CONSTRAINTS AUDIT\n")
-        f.write("-" * 80 + "\n")
-        f.write(f"  - All numeric values finite: YES (0 nulls, 0 NaNs, 0 Infs)\n")
-        f.write(f"  - Flexion ROM strictly < Peak Swing Flexion: PASS (0 violations)\n")
-        f.write(f"    * Minimum residual stance flexion: {val_info['min_peak_rom_diff']:.2f}°\n")
-        f.write(f"    * Maximum residual stance flexion: {val_info['max_peak_rom_diff']:.2f}°\n")
-        f.write(f"  - Positive Duration Ratios (stance_to_swing_ratio > 0): PASS (min = {df['stance_to_swing_ratio'].min():.3f})\n")
-        f.write(f"  - Positive Angular Velocity (mean_angular_velocity > 0): PASS (min = {df['mean_angular_velocity'].min():.2f} deg/s)\n")
-        f.write(f"  - Duplicate rows: {val_info['duplicates']} exact duplicates found\n")
-        f.write(f"  - Validation Status: {'PASSED ALL CHECKS' if val_info['is_valid'] else 'FAILED'}\n\n")
-
-        f.write("5. FEATURE CORRELATION MATRIX\n")
-        f.write("-" * 80 + "\n")
-        f.write(corr.to_string())
-        f.write("\n\n")
-
-        f.write("6. STATISTICAL SUMMARY PER CLASS\n")
-        f.write("-" * 80 + "\n")
-        f.write(df_stats.to_string(index=False))
-        f.write("\n\n")
-
-        f.write("7. SCIENTIFIC DISCLAIMER & PROTOCOL STATEMENT\n")
-        f.write("-" * 80 + "\n")
-        f.write("NOTICE: All 20,000 records in data.csv are synthetic modeling samples generated\n")
-        f.write("from class-conditioned multivariate distributions under biomechanical constraints.\n")
-        f.write("They do NOT constitute real patient electronic health records. Machine learning\n")
-        f.write("models trained on this dataset represent edge-AI prototypes and must not be used\n")
-        f.write("as autonomous clinical diagnostic systems without institutional clinical trial validation.\n")
+    return df_shuffled[OUTPUT_COLUMNS]
 
 
 def main():
-    print("[1/5] Auditing reference CSV...")
-    csv_ref = "real_patient_strides_dataset.csv"
-    audit_info = audit_source_dataset(csv_ref)
-    if audit_info["exists"]:
-        print(f"      Reference CSV found: {audit_info['total_rows']} rows.")
-        for k, v in audit_info["class_counts"].items():
-            print(f"        {k}: {v} ({audit_info['class_props'][k]*100:.2f}%)")
-    else:
-        print("      Reference CSV not found. Proceeding with blueprint specifications.")
+    print("[1/3] Generating 20,000 synthetic records with 5 features and 1 target...")
+    df = generate_synthetic_dataset(total_rows=20000, random_seed=42)
 
-    print("[2/5] Generating 20,000 synthetic records using constrained class-conditioned sampling...")
-    df_data, df_stats, df_full = generate_synthetic_dataset(total_records=20000, random_seed=42)
+    output_path = "data.csv"
+    print(f"[2/3] Saving dataset to '{output_path}'...")
+    df.to_csv(output_path, index=False)
+    print(f"      Saved {len(df):,} rows with {df.shape[1]} columns: {df.columns.tolist()}")
 
-    print("[3/5] Validating mathematical constraints, ranges, and schema...")
-    val_info = validate_dataset(df_data)
-    if not val_info["is_valid"]:
-        print("Validation errors detected:")
-        for issue in val_info["issues"]:
-            print(f"  ERROR: {issue}")
-        sys.exit(1)
-    print("      Validation SUCCESS: All physical and statistical constraints passed.")
+    print("[3/3] Class Distribution Summary:")
+    counts = df["target"].value_counts()
+    pcts = df["target"].value_counts(normalize=True) * 100
+    for name in [CLASS_NAMES[CLASS_NORMAL], CLASS_NAMES[CLASS_MILD], CLASS_NAMES[CLASS_SEVERE]]:
+        cnt = counts.get(name, 0)
+        pct = pcts.get(name, 0.0)
+        print(f"      {name:<30}: {cnt:>6,} ({pct:>6.2f}%)")
 
-    print("[4/5] Saving final dataset to data.csv...")
-    data_path = "data.csv"
-    df_data.to_csv(data_path, index=False)
-    print(f"      Saved {len(df_data):,} rows to {data_path}.")
-
-    print("[5/5] Generating validation reports and statistics...")
-    stats_path = "class_statistics.csv"
-    df_stats.to_csv(stats_path, index=False)
-    print(f"      Saved class statistics to {stats_path}.")
-
-    report_path = "data_validation_report.txt"
-    write_validation_report(report_path, audit_info, val_info, df_data, df_stats)
-    print(f"      Saved detailed validation report to {report_path}.")
-
-    print("\n--- SYNTHETIC DATA GENERATION COMPLETE ---")
-    print(f"Total Rows: {len(df_data):,}")
-    print(f"Target Distribution:\n{df_data['target'].value_counts(normalize=True).round(4) * 100}")
+    print("\nGeneration COMPLETE: Exactly 20,000 rows and 6 columns in data.csv.")
 
 
 if __name__ == "__main__":

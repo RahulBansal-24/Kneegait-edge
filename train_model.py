@@ -1,29 +1,22 @@
 """
-train_model.py — KneeGait-Edge Random Forest Training & Evaluation Script
+train_model.py — Compact 3-Class Random Forest Training and ESP32 C Header Export
 
-This script loads the validated 20,000-row synthetic dataset ('data.csv'), validates its schema,
-partitions it into an 80/20 stratified train/test split, trains a RandomForestClassifier,
-evaluates performance across standard clinical and statistical metrics, saves the trained model,
-and generates all evaluation reports, plots, and metadata.
-
-Model Configuration:
-- Input Features: ['peak_swing_flexion', 'flexion_rom', 'stance_to_swing_ratio', 'mean_angular_velocity']
-- Target: 'target' with classes ['HIGH_KOA_RISK', 'NORMAL_GAIT']
-- Stratified 80/20 train/test split (random_state=42)
-- Hyperparameters: n_estimators=200, max_depth=8, min_samples_split=5, random_state=42
+Loads 'data.csv' (6 columns: 5 input features + 1 target), trains an edge-optimized
+RandomForestClassifier (20 trees, max depth 5), evaluates performance on an 80/20
+stratified held-out test split, and exports:
+1. random_forest_model.joblib : Serialized Python model artifact.
+2. model_data.h               : Standalone C/C++ header for ESP32 Core 1 deployment
+                                (supports both floating-point and int16 fixed-point).
+3. model_metadata.json        : Complete metadata specification and lineage sheet.
 """
 
 import os
 import sys
+import time
 import json
-import argparse
-from datetime import datetime
-
 import numpy as np
 import pandas as pd
 import joblib
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
@@ -37,296 +30,332 @@ from sklearn.metrics import (
     confusion_matrix
 )
 
+# Canonical 5 features
+FEATURE_NAMES = [
+    "peak_swing_flexion",
+    "sagittal_rom",
+    "stance_to_swing_ratio",
+    "peak_angular_velocity",
+    "cadence_spm"
+]
 
-def parse_arguments():
-    """Configurable command-line hyperparameters."""
-    parser = argparse.ArgumentParser(description="Train Random Forest for KneeGait-Edge")
-    parser.add_argument("--data_path", type=str, default="data.csv", help="Path to training data CSV")
-    parser.add_argument("--n_estimators", type=int, default=200, help="Number of trees in forest")
-    parser.add_argument("--max_depth", type=int, default=8, help="Maximum tree depth")
-    parser.add_argument("--random_state", type=int, default=42, help="Seed for reproducibility")
-    parser.add_argument("--test_size", type=float, default=0.20, help="Holdout test proportion")
-    return parser.parse_args()
+CLASS_NAMES = [
+    "NORMAL_GAIT",
+    "MILD_FUNCTIONAL_RESTRICTION",
+    "SEVERE_ANTALGIC_STIFF_GAIT"
+]
 
+CLASS_TO_ID = {name: i for i, name in enumerate(CLASS_NAMES)}
+ID_TO_CLASS = {i: name for i, name in enumerate(CLASS_NAMES)}
 
-def load_and_validate_data(csv_path: str, feature_names: list, target_name: str) -> pd.DataFrame:
-    """Loads and validates the training CSV schema, types, and class labels."""
-    if not os.path.exists(csv_path):
-        raise FileNotFoundError(f"Dataset not found at {csv_path}. Please run generate_data.py first.")
+CLASS_DISPLAY_LABELS = {
+    0: "Normal / Healthy",
+    1: "Mild Functional Restriction",
+    2: "Severe Antalgic / Stiff Gait"
+}
 
-    df = pd.read_csv(csv_path)
-
-    expected_cols = feature_names + [target_name]
-    if df.columns.tolist() != expected_cols:
-        raise ValueError(f"Schema mismatch in {csv_path}. Expected: {expected_cols}, Found: {df.columns.tolist()}")
-
-    if df.isnull().sum().sum() > 0:
-        raise ValueError("Dataset contains null or missing values.")
-
-    if not np.isfinite(df[feature_names].values).all():
-        raise ValueError("Dataset contains non-finite numerical values.")
-
-    valid_classes = {'NORMAL_GAIT', 'HIGH_KOA_RISK'}
-    found_classes = set(df[target_name].unique())
-    if found_classes != valid_classes:
-        raise ValueError(f"Unexpected target classes: {found_classes}. Expected: {valid_classes}")
-
-    return df
+# Fixed-point quantization scaling factors (Q-format for int16)
+FIXED_POINT_SCALES = {
+    "peak_swing_flexion": 100.0,
+    "sagittal_rom": 100.0,
+    "stance_to_swing_ratio": 1000.0,
+    "peak_angular_velocity": 10.0,
+    "cadence_spm": 10.0
+}
 
 
-def train_and_evaluate(args):
-    """Executes the complete machine learning training and evaluation pipeline."""
-    feature_names = ['peak_swing_flexion', 'flexion_rom', 'stance_to_swing_ratio', 'mean_angular_velocity']
-    target_name = 'target'
+def generate_c_header(clf, output_path: str = "model_data.h"):
+    """Generates zero-dependency portable C header for ESP32."""
+    n_trees = len(clf.estimators_)
+    lines = []
+    lines.append("/*")
+    lines.append(" * model_data.h — KneeGait-Edge Compact Random Forest for ESP32")
+    lines.append(" * Canonical 5 Features: [peak_swing_flexion, sagittal_rom, stance_to_swing_ratio, peak_angular_velocity, cadence_spm]")
+    lines.append(" * Classes: 0: NORMAL_GAIT, 1: MILD_FUNCTIONAL_RESTRICTION, 2: SEVERE_ANTALGIC_STIFF_GAIT")
+    lines.append(" */")
+    lines.append("#ifndef KNEEGAIT_MODEL_DATA_H")
+    lines.append("#define KNEEGAIT_MODEL_DATA_H")
+    lines.append("")
+    lines.append("#include <stdint.h>")
+    lines.append("#include <math.h>")
+    lines.append("")
+    lines.append("#define KNEEGAIT_NUM_FEATURES 5")
+    lines.append("#define KNEEGAIT_NUM_CLASSES  3")
+    lines.append(f"#define KNEEGAIT_NUM_TREES    {n_trees}")
+    lines.append("")
+    lines.append("// Canonical Feature Indices")
+    lines.append("#define FEAT_PEAK_SWING_FLEXION    0")
+    lines.append("#define FEAT_SAGITTAL_ROM          1")
+    lines.append("#define FEAT_STANCE_TO_SWING_RATIO 2")
+    lines.append("#define FEAT_PEAK_ANGULAR_VELOCITY 3")
+    lines.append("#define FEAT_CADENCE_SPM           4")
+    lines.append("")
+    lines.append("// Fixed-Point Scale Multipliers (Q-format)")
+    for feat, scale in FIXED_POINT_SCALES.items():
+        lines.append(f"#define SCALE_{feat.upper():<30} {int(scale)}")
+    lines.append("")
+    lines.append("// Floating-Point Decision Trees")
 
-    print(f"[1/6] Loading and validating dataset from '{args.data_path}'...")
-    df = load_and_validate_data(args.data_path, feature_names, target_name)
-    total_samples = len(df)
-    print(f"      Loaded {total_samples:,} records with columns: {df.columns.tolist()}")
-    print(f"      Class distribution:\n{df[target_name].value_counts().to_string()}")
+    for t_idx, est in enumerate(clf.estimators_):
+        tree_ = est.tree_
+        lines.append(f"static inline int _tree_{t_idx}_predict(const float* f) {{")
 
-    print(f"[2/6] Performing {int((1-args.test_size)*100)}/{int(args.test_size*100)} stratified train/test split...")
-    X = df[feature_names]
-    y = df[target_name]
+        def recurse_tree(node_id: int, indent: str):
+            is_leaf = tree_.children_left[node_id] == -1 and tree_.children_right[node_id] == -1
+            if is_leaf:
+                pred_c = int(np.argmax(tree_.value[node_id][0]))
+                return [f"{indent}return {pred_c};"]
+            feat_idx = tree_.feature[node_id]
+            thresh = tree_.threshold[node_id]
+            left_id = tree_.children_left[node_id]
+            right_id = tree_.children_right[node_id]
 
+            c_lines = [f"{indent}if (f[{feat_idx}] <= {thresh:.6f}f) {{"]
+            c_lines.extend(recurse_tree(left_id, indent + "    "))
+            c_lines.append(f"{indent}}} else {{")
+            c_lines.extend(recurse_tree(right_id, indent + "    "))
+            c_lines.append(f"{indent}}}")
+            return c_lines
+
+        lines.extend(recurse_tree(0, "    "))
+        lines.append("}")
+        lines.append("")
+
+    lines.append("// Fixed-Point (int16_t) Decision Trees")
+    for t_idx, est in enumerate(clf.estimators_):
+        tree_ = est.tree_
+        lines.append(f"static inline int _tree_{t_idx}_predict_fixed(const int16_t* q) {{")
+
+        def recurse_fixed(node_id: int, indent: str):
+            is_leaf = tree_.children_left[node_id] == -1 and tree_.children_right[node_id] == -1
+            if is_leaf:
+                pred_c = int(np.argmax(tree_.value[node_id][0]))
+                return [f"{indent}return {pred_c};"]
+            feat_idx = tree_.feature[node_id]
+            feat_name = FEATURE_NAMES[feat_idx]
+            scale = FIXED_POINT_SCALES[feat_name]
+            thresh_fixed = int(round(tree_.threshold[node_id] * scale))
+            left_id = tree_.children_left[node_id]
+            right_id = tree_.children_right[node_id]
+
+            c_lines = [f"{indent}if (q[{feat_idx}] <= {thresh_fixed}) {{"]
+            c_lines.extend(recurse_fixed(left_id, indent + "    "))
+            c_lines.append(f"{indent}}} else {{")
+            c_lines.extend(recurse_fixed(right_id, indent + "    "))
+            c_lines.append(f"{indent}}}")
+            return c_lines
+
+        lines.extend(recurse_fixed(0, "    "))
+        lines.append("}")
+        lines.append("")
+
+    lines.append("""
+/**
+ * @brief Predicts 3-class gait impairment using majority ensemble vote.
+ * @param features Array of 5 floats in canonical order:
+ *                 [peak_swing_flexion, sagittal_rom, stance_to_swing_ratio, peak_angular_velocity, cadence_spm]
+ * @return Class ID: 0 (NORMAL_GAIT), 1 (MILD_FUNCTIONAL_RESTRICTION), 2 (SEVERE_ANTALGIC_STIFF_GAIT).
+ */
+static inline int kneegait_predict(const float* features) {
+    if (features == 0) return -1;
+    for (int i = 0; i < KNEEGAIT_NUM_FEATURES; ++i) {
+        if (isnan(features[i]) || isinf(features[i])) return -1;
+    }
+    int votes[KNEEGAIT_NUM_CLASSES] = {0, 0, 0};
+""")
+    for t_idx in range(n_trees):
+        lines.append(f"    votes[_tree_{t_idx}_predict(features)]++;")
+
+    lines.append("""
+    int best_class = 0;
+    int max_votes = votes[0];
+    for (int c = 1; c < KNEEGAIT_NUM_CLASSES; ++c) {
+        if (votes[c] >= max_votes) {
+            max_votes = votes[c];
+            best_class = c;
+        }
+    }
+    return best_class;
+}
+
+/**
+ * @brief Fixed-point int16 inference API for memory-constrained ESP32 operation.
+ */
+static inline int kneegait_predict_fixed(const int16_t* features_q) {
+    if (features_q == 0) return -1;
+    int votes[KNEEGAIT_NUM_CLASSES] = {0, 0, 0};
+""")
+    for t_idx in range(n_trees):
+        lines.append(f"    votes[_tree_{t_idx}_predict_fixed(features_q)]++;")
+
+    lines.append("""
+    int best_class = 0;
+    int max_votes = votes[0];
+    for (int c = 1; c < KNEEGAIT_NUM_CLASSES; ++c) {
+        if (votes[c] >= max_votes) {
+            max_votes = votes[c];
+            best_class = c;
+        }
+    }
+    return best_class;
+}
+
+static inline const char* kneegait_get_class_name(int class_id) {
+    switch(class_id) {
+        case 0: return "NORMAL_GAIT";
+        case 1: return "MILD_FUNCTIONAL_RESTRICTION";
+        case 2: return "SEVERE_ANTALGIC_STIFF_GAIT";
+        default: return "UNKNOWN";
+    }
+}
+
+static inline const char* kneegait_get_display_label(int class_id) {
+    switch(class_id) {
+        case 0: return "Normal / Healthy";
+        case 1: return "Mild Functional Restriction";
+        case 2: return "Severe Antalgic / Stiff Gait";
+        default: return "Invalid";
+    }
+}
+
+#endif // KNEEGAIT_MODEL_DATA_H
+""")
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+
+
+def main():
+    data_path = "data.csv"
+    if not os.path.exists(data_path):
+        print(f"Error: {data_path} not found. Please run 'python generate_data.py' first.")
+        sys.exit(1)
+
+    print(f"[1/5] Loading '{data_path}'...")
+    df = pd.read_csv(data_path)
+    print(f"      Loaded {len(df):,} records with columns: {df.columns.tolist()}")
+
+    X = df[FEATURE_NAMES]
+    y = df["target"].map(CLASS_TO_ID)
+
+    print("[2/5] Partitioning 80/20 stratified train/test split...")
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y,
-        test_size=args.test_size,
-        random_state=args.random_state,
-        stratify=y
+        X, y, test_size=0.20, random_state=42, stratify=y
     )
+    print(f"      Train samples: {len(X_train):,}, Test samples: {len(X_test):,}")
 
-    print(f"      Training samples: {len(X_train):,} ({len(X_train)/total_samples*100:.1f}%)")
-    print(f"      Testing samples:  {len(X_test):,} ({len(X_test)/total_samples*100:.1f}%)")
-
-    print(f"[3/6] Fitting RandomForestClassifier (n_estimators={args.n_estimators}, max_depth={args.max_depth})...")
+    print("[3/5] Fitting compact RandomForestClassifier (20 trees, max depth 5)...")
     clf = RandomForestClassifier(
-        n_estimators=args.n_estimators,
-        max_depth=args.max_depth,
-        min_samples_split=5,
-        min_samples_leaf=2,
-        random_state=args.random_state,
-        n_jobs=-1
+        n_estimators=20,
+        max_depth=5,
+        class_weight="balanced",
+        random_state=42,
+        n_jobs=1
     )
+    t0 = time.perf_counter()
     clf.fit(X_train, y_train)
-    print("      Model training complete.")
+    train_duration_ms = (time.perf_counter() - t0) * 1000
+    print(f"      Trained in {train_duration_ms:.2f} ms")
 
-    print("[4/6] Evaluating model on held-out test split...")
+    print("[4/5] Evaluating on held-out test split...")
     y_pred = clf.predict(X_test)
-    classes = sorted(list(set(y)))  # ['HIGH_KOA_RISK', 'NORMAL_GAIT']
-
     acc = accuracy_score(y_test, y_pred)
     bal_acc = balanced_accuracy_score(y_test, y_pred)
-    macro_p = precision_score(y_test, y_pred, average='macro')
-    macro_r = recall_score(y_test, y_pred, average='macro')
-    macro_f1 = f1_score(y_test, y_pred, average='macro')
-    weighted_p = precision_score(y_test, y_pred, average='weighted')
-    weighted_r = recall_score(y_test, y_pred, average='weighted')
-    weighted_f1 = f1_score(y_test, y_pred, average='weighted')
+    macro_f1 = f1_score(y_test, y_pred, average="macro")
 
-    cm = confusion_matrix(y_test, y_pred, labels=classes)
-    report_dict = classification_report(y_test, y_pred, labels=classes, output_dict=True)
-    report_df = pd.DataFrame(report_dict).transpose()
-
-    print(f"      Accuracy:          {acc:.4f} ({acc*100:.2f}%)")
-    print(f"      Balanced Accuracy: {bal_acc:.4f} ({bal_acc*100:.2f}%)")
+    print(f"      Test Accuracy:     {acc*100:.2f}%")
+    print(f"      Balanced Accuracy: {bal_acc*100:.2f}%")
     print(f"      Macro F1-Score:    {macro_f1:.4f}")
-    print(f"      Weighted F1-Score: {weighted_f1:.4f}")
+    print("\nDetailed Classification Report:")
+    print(classification_report(y_test, y_pred, target_names=CLASS_NAMES, digits=4))
 
-    print("[5/6] Exporting evaluation artifacts, plots, and tables...")
-    
-    # Save classification report CSV
-    report_csv_path = "classification_report.csv"
-    report_df.to_csv(report_csv_path)
-    print(f"      Saved {report_csv_path}")
+    cm = confusion_matrix(y_test, y_pred, labels=[0, 1, 2])
+    print("Confusion Matrix:")
+    print(cm)
 
-    # Save confusion matrix CSV
-    cm_df = pd.DataFrame(cm, index=[f"Actual_{c}" for c in classes], columns=[f"Predicted_{c}" for c in classes])
-    cm_csv_path = "confusion_matrix.csv"
-    cm_df.to_csv(cm_csv_path)
-    print(f"      Saved {cm_csv_path}")
+    print("\n[5/5] Exporting artifacts to root directory...")
+    # 1. Joblib model
+    joblib_path = "random_forest_model.joblib"
+    joblib.dump(clf, joblib_path)
+    joblib_kb = os.path.getsize(joblib_path) / 1024
+    print(f"      Saved model: {joblib_path} ({joblib_kb:.1f} KB)")
 
-    # Plot Confusion Matrix
-    plt.figure(figsize=(7, 5.5))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=classes, yticklabels=classes, cbar=False)
-    plt.title("Confusion Matrix — KneeGait-Edge Random Forest", fontsize=12, fontweight='bold', pad=12)
-    plt.xlabel("Predicted Class", fontsize=10, labelpad=8)
-    plt.ylabel("Actual True Class", fontsize=10, labelpad=8)
-    plt.tight_layout()
-    cm_png_path = "confusion_matrix.png"
-    plt.savefig(cm_png_path, dpi=300)
-    plt.close()
-    print(f"      Saved {cm_png_path}")
+    # 2. C Header
+    header_path = "model_data.h"
+    generate_c_header(clf, header_path)
+    header_kb = os.path.getsize(header_path) / 1024
+    print(f"      Saved C header: {header_path} ({header_kb:.1f} KB)")
 
-    # Feature importances
-    fi_df = pd.DataFrame({
-        'Feature': feature_names,
-        'Importance': clf.feature_importances_
-    }).sort_values('Importance', ascending=False).reset_index(drop=True)
-    
-    fi_csv_path = "feature_importance.csv"
-    fi_df.to_csv(fi_csv_path, index=False)
-    print(f"      Saved {fi_csv_path}")
+    # 3. JSON Model for Browser / JS Parity Testing
+    json_path = "model.json"
+    trees_json = []
+    for estimator in clf.estimators_:
+        tree = estimator.tree_
+        nodes = []
+        for i in range(tree.node_count):
+            is_leaf = tree.children_left[i] == tree.children_right[i]
+            if is_leaf:
+                pred_class = int(np.argmax(tree.value[i][0]))
+                nodes.append({
+                    "is_leaf": True,
+                    "class": pred_class,
+                    "probabilities": (tree.value[i][0] / np.sum(tree.value[i][0])).tolist()
+                })
+            else:
+                nodes.append({
+                    "is_leaf": False,
+                    "feature": int(tree.feature[i]),
+                    "threshold": float(tree.threshold[i]),
+                    "left": int(tree.children_left[i]),
+                    "right": int(tree.children_right[i])
+                })
+        trees_json.append(nodes)
 
-    # Plot Feature Importance
-    plt.figure(figsize=(8, 4.5))
-    palette = sns.color_palette("mako", len(fi_df))
-    sns.barplot(data=fi_df, x='Importance', y='Feature', hue='Feature', palette=palette, legend=False)
-    plt.title("Gini Feature Importance — KneeGait-Edge Random Forest", fontsize=12, fontweight='bold', pad=12)
-    plt.xlabel("Relative Importance (Mean Decrease in Impurity)", fontsize=10, labelpad=8)
-    plt.ylabel("Model Input Feature", fontsize=10, labelpad=8)
-    for i, row in fi_df.iterrows():
-        plt.text(row['Importance'] + 0.01, i, f"{row['Importance']*100:.2f}%", va='center', fontsize=9, fontweight='bold')
-    plt.xlim(0, max(fi_df['Importance']) * 1.15)
-    plt.tight_layout()
-    fi_png_path = "feature_importance.png"
-    plt.savefig(fi_png_path, dpi=300)
-    plt.close()
-    print(f"      Saved {fi_png_path}")
+    model_dict = {
+        "model_type": "RandomForestClassifier",
+        "n_estimators": len(clf.estimators_),
+        "max_depth": clf.max_depth,
+        "features": FEATURE_NAMES,
+        "classes": CLASS_NAMES,
+        "trees": trees_json
+    }
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(model_dict, f, indent=2)
+    print(f"      Saved JSON model: {json_path} ({os.path.getsize(json_path)/1024:.1f} KB)")
 
-    # Save comprehensive evaluation text report
-    eval_report_path = "evaluation_report.txt"
-    with open(eval_report_path, 'w', encoding='utf-8') as f:
-        f.write("=" * 80 + "\n")
-        f.write("KNEEGAT-EDGE RANDOM FOREST MODEL EVALUATION REPORT\n")
-        f.write("=" * 80 + "\n\n")
-        f.write("1. MODEL ARCHITECTURE & HYPERPARAMETERS\n")
-        f.write("-" * 80 + "\n")
-        f.write(f"Classifier:              RandomForestClassifier (scikit-learn)\n")
-        f.write(f"Number of Estimators:    {args.n_estimators}\n")
-        f.write(f"Max Tree Depth:          {args.max_depth}\n")
-        f.write(f"Min Samples Split:       5\n")
-        f.write(f"Min Samples Leaf:        2\n")
-        f.write(f"Random State:            {args.random_state}\n")
-        f.write(f"Train/Test Partition:    {int((1-args.test_size)*100)}% Train ({len(X_train):,} rows) / {int(args.test_size*100)}% Test ({len(X_test):,} rows)\n")
-        f.write(f"Stratified Split:        Yes\n")
-        f.write(f"Input Features (4):      {feature_names}\n")
-        f.write(f"Target Column:           {target_name} ({classes})\n\n")
-
-        f.write("2. OVERALL TEST PERFORMANCE METRICS\n")
-        f.write("-" * 80 + "\n")
-        f.write(f"Test Accuracy:           {acc:.6f} ({acc*100:.2f}%)\n")
-        f.write(f"Balanced Accuracy:       {bal_acc:.6f} ({bal_acc*100:.2f}%)\n")
-        f.write(f"Macro Precision:         {macro_p:.6f}\n")
-        f.write(f"Macro Recall:            {macro_r:.6f}\n")
-        f.write(f"Macro F1-Score:          {macro_f1:.6f}\n")
-        f.write(f"Weighted Precision:      {weighted_p:.6f}\n")
-        f.write(f"Weighted Recall:         {weighted_r:.6f}\n")
-        f.write(f"Weighted F1-Score:       {weighted_f1:.6f}\n\n")
-
-        f.write("3. DETAILED PER-CLASS CLASSIFICATION REPORT\n")
-        f.write("-" * 80 + "\n")
-        f.write(classification_report(y_test, y_pred, labels=classes, digits=4))
-        f.write("\n\n")
-
-        f.write("4. CONFUSION MATRIX\n")
-        f.write("-" * 80 + "\n")
-        f.write(f"{'':<20} {'Pred ' + classes[0]:<22} {'Pred ' + classes[1]:<22}\n")
-        f.write(f"{'True ' + classes[0]:<20} {cm[0,0]:<22} {cm[0,1]:<22}\n")
-        f.write(f"{'True ' + classes[1]:<20} {cm[1,0]:<22} {cm[1,1]:<22}\n\n")
-
-        f.write("5. RELATIVE FEATURE IMPORTANCES\n")
-        f.write("-" * 80 + "\n")
-        for _, row in fi_df.iterrows():
-            f.write(f"  - {row['Feature']:<25}: {row['Importance']:.6f} ({row['Importance']*100:.2f}%)\n")
-        f.write("\n")
-
-        f.write("6. CLINICAL & ENGINEERING INTERPRETATION\n")
-        f.write("-" * 80 + "\n")
-        f.write("  - The evaluation shows high discriminatory performance on synthetic gait data.\n")
-        f.write("  - Knee flexion range of motion (flexion_rom) and peak swing flexion are the\n")
-        f.write("    primary predictive biomarkers, matching the clinical literature (PMC4037512).\n")
-        f.write("  - Realistic overlap in transitional boundary regions introduces expected,\n")
-        f.write("    physiologically plausible false negatives and false positives (~4-5%).\n")
-        f.write("  - DISCLAIMER: Model was evaluated on synthetic data and does not guarantee\n")
-        f.write("    diagnostic efficacy in uncalibrated clinical populations without optical motion\n")
-        f.write("    capture validation.\n")
-    print(f"      Saved {eval_report_path}")
-
-    print("[6/6] Saving trained model and metadata...")
-    model_save_path = "random_forest_model.joblib"
-    joblib.dump(clf, model_save_path)
-    print(f"      Saved model to {model_save_path}")
-
-    # Build model metadata
-    expected_cols = feature_names + [target_name]
+    # 3. Model Metadata JSON
     metadata = {
         "model_type": "sklearn.ensemble.RandomForestClassifier",
-        "input_features": feature_names,
-        "feature_order": feature_names,
-        "target_column": target_name,
-        "class_names": classes,
-        "class_encoding": {cls: i for i, cls in enumerate(classes)},
-        "random_seed": args.random_state,
-        "train_test_split": {
-            "test_size": args.test_size,
-            "train_size": 1.0 - args.test_size,
-            "stratified": True,
-            "train_samples": len(X_train),
-            "test_samples": len(X_test)
-        },
+        "feature_names": FEATURE_NAMES,
+        "feature_order": FEATURE_NAMES,
+        "num_features": len(FEATURE_NAMES),
+        "target_column": "target",
+        "class_names": CLASS_NAMES,
+        "class_id_mapping": {str(i): name for i, name in enumerate(CLASS_NAMES)},
+        "display_labels": {str(i): label for i, label in CLASS_DISPLAY_LABELS.items()},
         "hyperparameters": {
-            "n_estimators": args.n_estimators,
-            "max_depth": args.max_depth,
-            "min_samples_split": 5,
-            "min_samples_leaf": 2,
-            "random_state": args.random_state
+            "n_estimators": 20,
+            "max_depth": 5,
+            "class_weight": "balanced",
+            "random_state": 42
         },
-        "dataset_metadata": {
-            "filename": args.data_path,
-            "total_rows": total_samples,
-            "schema": expected_cols,
-            "normal_gait_count": int((y == 'NORMAL_GAIT').sum()),
-            "high_koa_risk_count": int((y == 'HIGH_KOA_RISK').sum())
-        },
-        "metrics": {
+        "evaluation_metrics": {
             "test_accuracy": float(acc),
             "balanced_accuracy": float(bal_acc),
-            "macro_f1": float(macro_f1),
-            "weighted_f1": float(weighted_f1)
+            "macro_f1": float(macro_f1)
         },
-        "synthetic_data_warning": (
-            "This model was trained exclusively on synthetic kinematic stride cycles generated "
-            "from biomechanical assumptions. It does not establish clinical diagnostic efficacy "
-            "and should be deployed on edge hardware for investigational research purposes only."
-        ),
-        "training_timestamp": datetime.now().isoformat()
+        "disclaimer": (
+            "Gait pattern classification prototype trained on synthetic data under specified "
+            "threshold rules (Normal >= 49.4°, Mild 45.0°-49.4°, Severe < 45.0°). High accuracy reflects "
+            "consistent learning of these biomechanical rules across the 5 features."
+        )
     }
-
-    metadata_path = "model_metadata.json"
-    with open(metadata_path, 'w', encoding='utf-8') as f:
+    with open("model_metadata.json", "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=4)
-    print(f"      Saved metadata to {metadata_path}")
+    print("      Saved metadata: model_metadata.json")
 
-    # Verification: Load model and test a sample prediction
-    print("\n--- MODEL PREDICTION VERIFICATION ---")
-    loaded_clf = joblib.load(model_save_path)
-    sample_healthy = pd.DataFrame([{
-        'peak_swing_flexion': 61.5,
-        'flexion_rom': 58.0,
-        'stance_to_swing_ratio': 1.42,
-        'mean_angular_velocity': 122.0
-    }])[feature_names]
-
-    sample_koa = pd.DataFrame([{
-        'peak_swing_flexion': 33.0,
-        'flexion_rom': 28.5,
-        'stance_to_swing_ratio': 1.95,
-        'mean_angular_velocity': 68.0
-    }])[feature_names]
-
-    pred_h = loaded_clf.predict(sample_healthy)[0]
-    prob_h = loaded_clf.predict_proba(sample_healthy)[0]
-    pred_k = loaded_clf.predict(sample_koa)[0]
-    prob_k = loaded_clf.predict_proba(sample_koa)[0]
-
-    print(f"Sample 1 (Healthy Biomechanics): Predicted = '{pred_h}' (Probabilities: {dict(zip(classes, [round(p, 4) for p in prob_h]))})")
-    print(f"Sample 2 (KOA Stiff Biomechanics): Predicted = '{pred_k}' (Probabilities: {dict(zip(classes, [round(p, 4) for p in prob_k]))})")
-    assert pred_h == "NORMAL_GAIT", "Healthy sample verification failed"
-    assert pred_k == "HIGH_KOA_RISK", "KOA sample verification failed"
-    print("Verification SUCCESS: Saved model loads and correctly predicts test strides.")
+    print("\nTraining and export COMPLETE.")
 
 
 if __name__ == "__main__":
-    args = parse_arguments()
-    train_and_evaluate(args)
+    main()

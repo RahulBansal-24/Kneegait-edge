@@ -1,59 +1,46 @@
 {
     "model_type": "sklearn.ensemble.RandomForestClassifier",
-    "input_features": [
+    "feature_names": [
         "peak_swing_flexion",
-        "flexion_rom",
+        "sagittal_rom",
         "stance_to_swing_ratio",
-        "mean_angular_velocity"
+        "peak_angular_velocity",
+        "cadence_spm"
     ],
     "feature_order": [
         "peak_swing_flexion",
-        "flexion_rom",
+        "sagittal_rom",
         "stance_to_swing_ratio",
-        "mean_angular_velocity"
+        "peak_angular_velocity",
+        "cadence_spm"
     ],
+    "num_features": 5,
     "target_column": "target",
     "class_names": [
-        "HIGH_KOA_RISK",
-        "NORMAL_GAIT"
+        "NORMAL_GAIT",
+        "MILD_FUNCTIONAL_RESTRICTION",
+        "SEVERE_ANTALGIC_STIFF_GAIT"
     ],
-    "class_encoding": {
-        "HIGH_KOA_RISK": 0,
-        "NORMAL_GAIT": 1
+    "class_id_mapping": {
+        "0": "NORMAL_GAIT",
+        "1": "MILD_FUNCTIONAL_RESTRICTION",
+        "2": "SEVERE_ANTALGIC_STIFF_GAIT"
     },
-    "random_seed": 42,
-    "train_test_split": {
-        "test_size": 0.2,
-        "train_size": 0.8,
-        "stratified": true,
-        "train_samples": 16000,
-        "test_samples": 4000
+    "display_labels": {
+        "0": "Normal / Healthy",
+        "1": "Mild Functional Restriction",
+        "2": "Severe Antalgic / Stiff Gait"
     },
     "hyperparameters": {
-        "n_estimators": 200,
-        "max_depth": 8,
-        "min_samples_split": 5,
-        "min_samples_leaf": 2,
+        "n_estimators": 20,
+        "max_depth": 5,
+        "class_weight": "balanced",
         "random_state": 42
     },
-    "dataset_metadata": {
-        "filename": "data.csv",
-        "total_rows": 20000,
-        "schema": [
-            "peak_swing_flexion",
-            "flexion_rom",
-            "stance_to_swing_ratio",
-            "mean_angular_velocity",
-            "target"
-        ],
-        "normal_gait_count": 5181,
-        "high_koa_risk_count": 14819
+    "evaluation_metrics": {
+        "test_accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "macro_f1": 1.0
     },
-    "metrics": {
-        "test_accuracy": 0.97275,
-        "balanced_accuracy": 0.9643462867147078,
-        "macro_f1": 0.9644921039316118,
-        "weighted_f1": 0.9727457190792802
-    },
-    "synthetic_data_warning": "Model trained exclusively on synthetic kinematic stride cycles generated from biomechanical assumptions. Does not establish clinical diagnostic efficacy in uncalibrated patient populations."
+    "disclaimer": "Gait pattern classification prototype trained on synthetic data under specified threshold rules (Normal >= 49.4\u00b0, Mild 45.0\u00b0-49.4\u00b0, Severe < 45.0\u00b0). High accuracy reflects consistent learning of these biomechanical rules across the 5 features."
 }
