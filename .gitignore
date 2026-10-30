@@ -3,7 +3,6 @@
 # Code review and project summary documents
 KneeGait_Edge_Code_Review_and_Project_Summary.docx
 *.docx
-*.pdf
 
 # Python & Environment artifacts
 __pycache__/
