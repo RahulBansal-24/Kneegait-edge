@@ -5,7 +5,6 @@ import {
   Bluetooth,
   Download,
   FileText,
-  Settings as SettingsIcon,
 } from 'lucide-react';
 import { NavLink, Route, Routes } from 'react-router-dom';
 import { BleProvider } from './context/BleContext';
@@ -15,14 +14,12 @@ import Analytics from './pages/Analytics';
 import ClinicianReport from './pages/ClinicianReport';
 import ConnectModal from './pages/ConnectModal';
 import Dashboard from './pages/Dashboard';
-import Settings from './pages/Settings';
 
 const NAV = [
   { to: '/', label: 'Dashboard', icon: Activity },
   { to: '/connect', label: 'Connect', icon: Bluetooth },
   { to: '/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/report', label: 'Report', icon: FileText },
-  { to: '/settings', label: 'Settings', icon: SettingsIcon },
 ];
 
 export default function App() {
@@ -155,7 +152,6 @@ export default function App() {
               <Route path="/connect" element={<ConnectModal />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/report" element={<ClinicianReport />} />
-              <Route path="/settings" element={<Settings />} />
             </Routes>
           </main>
         </div>

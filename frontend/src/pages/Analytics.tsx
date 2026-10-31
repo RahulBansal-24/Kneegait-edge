@@ -432,8 +432,8 @@ export default function Analytics() {
 
       {/* Segment angles */}
       <Panel
-        title="Thigh and shank motion"
-        subtitle="Comparison of thigh and shank segment-angle signals."
+        title="Shank motion"
+        subtitle="Shank segment-angle signal over time."
       >
         <div className="h-72 w-full">
           {chartData.length < 2 ? (
@@ -470,16 +470,6 @@ export default function Analytics() {
                 />
 
                 <Legend />
-
-                <Line
-                  type="monotone"
-                  dataKey="thigh"
-                  name="Thigh angle"
-                  stroke="#2563eb"
-                  strokeWidth={2}
-                  dot={false}
-                  isAnimationActive={false}
-                />
 
                 <Line
                   type="monotone"

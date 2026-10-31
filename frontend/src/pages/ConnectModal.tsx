@@ -56,6 +56,8 @@ function StatusDot({ active }: { active: boolean }) {
 }
 
 function SensorCard({
+  title,
+  subtitle,
   name,
   location,
   connected,
@@ -63,6 +65,8 @@ function SensorCard({
   accel,
   address,
 }: {
+  title?: string;
+  subtitle?: string;
   name: string;
   location: string;
   connected: boolean;
@@ -72,6 +76,12 @@ function SensorCard({
 }) {
   return (
     <Panel>
+      {title && (
+        <SectionTitle
+          title={title}
+          subtitle={subtitle || ''}
+        />
+      )}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="rounded-xl bg-teal-50 p-3 text-teal-700">
@@ -124,7 +134,7 @@ function SensorCard({
 }
 
 export default function ConnectModal() {
-  const { status, errorMessage, deviceName, telemetry, packetCount, connect, disconnect, logs } = useBle();
+  const { status, errorMessage, deviceName, telemetry, packetCount, metrics, connect, disconnect, logs } = useBle();
   const isConnected = status === 'connected';
 
   return (
@@ -140,7 +150,7 @@ export default function ConnectModal() {
             Connect Device
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-            Manage your wearable sensor node and monitor the dual IMUs used for
+            Manage your wearable sensor node and monitor the sensor kinematics used for
             knee-flexion estimation over Bluetooth Low Energy.
           </p>
         </div>
@@ -180,7 +190,7 @@ export default function ConnectModal() {
               </div>
 
               <p className="mt-1 text-sm text-muted">
-                Dual-IMU wearable gait monitoring node
+                Wearable gait monitoring node
               </p>
 
               <div className="mt-3 flex items-center gap-2 text-sm">
@@ -259,35 +269,9 @@ export default function ConnectModal() {
         </div>
       </Panel>
 
-      {/* Sensor cards */}
-      <div>
-        <SectionTitle
-          title="Sensor health"
-          subtitle="Dual MPU-6050 IMUs relative thigh-to-shank motion tracking."
-        />
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <SensorCard
-            name="Thigh IMU"
-            location="Upper leg · Reference orientation"
-            connected={isConnected}
-            gyro={telemetry.thighGyro}
-            accel={telemetry.accelZ}
-            address="0x68"
-          />
-          <SensorCard
-            name="Shank IMU"
-            location="Lower leg · Relative orientation"
-            connected={isConnected}
-            gyro={telemetry.shankGyro}
-            accel={telemetry.accelX}
-            address="0x69"
-          />
-        </div>
-      </div>
-
-      {/* Telemetry */}
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+      {/* Telemetry and Sensor / Diagnostics */}
+      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] items-start">
+        {/* Left: Live telemetry */}
         <Panel>
           <SectionTitle
             title="Live telemetry"
@@ -322,94 +306,120 @@ export default function ConnectModal() {
 
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
             {[
-              { label: 'Thigh gyro', value: telemetry.thighGyro, unit: '°/s' },
-              { label: 'Shank gyro', value: telemetry.shankGyro, unit: '°/s' },
-              { label: 'Accel X', value: telemetry.accelX, unit: 'm/s²' },
-              { label: 'Accel Y', value: telemetry.accelY, unit: 'm/s²' },
-              { label: 'Accel Z', value: telemetry.accelZ, unit: 'm/s²' },
-              { label: 'Packets received', value: telemetry.packets, unit: '' },
+              {
+                label: 'Live Knee Angle',
+                value: isConnected ? telemetry.angle.toFixed(1) : '--',
+                unit: isConnected ? '°' : '',
+              },
+              {
+                label: 'Angular Velocity',
+                value: isConnected ? Math.abs(telemetry.shankGyro).toFixed(1) : '--',
+                unit: isConnected ? '°/s' : '',
+              },
+              {
+                label: 'Stride ROM',
+                value: isConnected ? metrics.rom.toFixed(1) : '--',
+                unit: isConnected ? '°' : '',
+              },
+              {
+                label: 'Peak Swing',
+                value: isConnected && metrics.lastPeak !== null ? metrics.lastPeak.toFixed(1) : '--',
+                unit: isConnected && metrics.lastPeak !== null ? '°' : '',
+              },
+              {
+                label: 'Cadence',
+                value: isConnected && metrics.cadence !== null ? metrics.cadence : '--',
+                unit: isConnected && metrics.cadence !== null ? 'spm' : '',
+              },
+              {
+                label: 'Packets Received',
+                value: isConnected ? (packetCount || telemetry.packets) : '--',
+                unit: '',
+              },
             ].map((item) => (
               <div key={item.label} className="rounded-xl border border-line p-3">
                 <p className="text-xs text-muted">{item.label}</p>
                 <p className="mt-2 font-semibold text-ink num">
-                  {isConnected
-                    ? typeof item.value === 'number'
-                      ? item.label === 'Packets received'
-                        ? item.value
-                        : item.value.toFixed(1)
-                      : item.value
-                    : '--'}
-                  <span className="ml-1 text-xs font-normal text-muted">{item.unit}</span>
+                  {item.value}
+                  {item.unit && <span className="ml-1 text-xs font-normal text-muted">{item.unit}</span>}
                 </p>
               </div>
             ))}
           </div>
         </Panel>
 
-        {/* Diagnostics */}
-        <Panel>
-          <SectionTitle
-            title="Connection diagnostics"
-            subtitle="Device and telemetry stream status."
+        {/* Right: Sensor health & Diagnostics */}
+        <div className="space-y-6">
+          <SensorCard
+            title="Sensor health"
+            subtitle="MPU-6050 IMU shank motion tracking."
+            name="Shank IMU"
+            location="Lower leg · Relative orientation"
+            connected={isConnected}
+            gyro={telemetry.shankGyro}
+            accel={telemetry.accelX}
+            address="0x69"
           />
 
-          <div className="space-y-4">
-            {[
-              {
-                label: 'ESP32 device',
-                detail: isConnected ? 'Hardware connection active' : 'Waiting for connection',
-                ok: isConnected,
-                icon: Cpu,
-              },
-              {
-                label: 'Thigh IMU (0x68)',
-                detail: isConnected ? 'Active stream' : 'Awaiting device',
-                ok: isConnected,
-                icon: Activity,
-              },
-              {
-                label: 'Shank IMU (0x69)',
-                detail: isConnected ? 'Active stream' : 'Awaiting device',
-                ok: isConnected,
-                icon: Activity,
-              },
-              {
-                label: 'Telemetry stream',
-                detail: isConnected ? 'Streaming at 50 Hz' : 'Stream idle',
-                ok: isConnected,
-                icon: Radio,
-              },
-            ].map(({ label, detail, ok, icon: Icon }) => (
-              <div key={label} className="flex items-center gap-3">
-                <div className="rounded-lg bg-paper p-2 text-muted">
-                  <Icon size={17} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-ink">{label}</p>
-                  <p className="text-xs text-muted">{detail}</p>
-                </div>
-                {ok ? (
-                  <CheckCircle2 size={18} className="text-emerald-600" />
-                ) : (
-                  <CircleDot size={18} className="text-slate-300" />
-                )}
-              </div>
-            ))}
-          </div>
+          {/* Diagnostics */}
+          <Panel>
+            <SectionTitle
+              title="Connection diagnostics"
+              subtitle="Device and telemetry stream status."
+            />
 
-          <div className="mt-5 rounded-xl border border-teal-200 bg-teal-50 p-3">
-            <div className="flex items-start gap-2">
-              <Zap size={16} className="mt-0.5 shrink-0 text-teal-700" />
-              <div>
-                <p className="text-sm font-semibold text-teal-900">Direct Web Bluetooth Enabled</p>
-                <p className="mt-1 text-xs leading-5 text-teal-800">
-                  Data is streamed directly from your ESP32 over Web Bluetooth notifications.
-                  Make sure your ESP32 is powered on and advertising.
-                </p>
+            <div className="space-y-4">
+              {[
+                {
+                  label: 'ESP32 device',
+                  detail: isConnected ? 'Hardware connection active' : 'Waiting for connection',
+                  ok: isConnected,
+                  icon: Cpu,
+                },
+                {
+                  label: 'Shank IMU (0x69)',
+                  detail: isConnected ? 'Active stream' : 'Awaiting device',
+                  ok: isConnected,
+                  icon: Activity,
+                },
+                {
+                  label: 'Telemetry stream',
+                  detail: isConnected ? 'Streaming at 50 Hz' : 'Stream idle',
+                  ok: isConnected,
+                  icon: Radio,
+                },
+              ].map(({ label, detail, ok, icon: Icon }) => (
+                <div key={label} className="flex items-center gap-3">
+                  <div className="rounded-lg bg-paper p-2 text-muted">
+                    <Icon size={17} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-ink">{label}</p>
+                    <p className="text-xs text-muted">{detail}</p>
+                  </div>
+                  {ok ? (
+                    <CheckCircle2 size={18} className="text-emerald-600" />
+                  ) : (
+                    <CircleDot size={18} className="text-slate-300" />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 rounded-xl border border-teal-200 bg-teal-50 p-3">
+              <div className="flex items-start gap-2">
+                <Zap size={16} className="mt-0.5 shrink-0 text-teal-700" />
+                <div>
+                  <p className="text-sm font-semibold text-teal-900">Direct Web Bluetooth Enabled</p>
+                  <p className="mt-1 text-xs leading-5 text-teal-800">
+                    Data is streamed directly from your ESP32 over Web Bluetooth notifications.
+                    Make sure your ESP32 is powered on and advertising.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        </Panel>
+          </Panel>
+        </div>
       </div>
 
       {/* Event log */}

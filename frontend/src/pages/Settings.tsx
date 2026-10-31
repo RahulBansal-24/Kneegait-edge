@@ -237,27 +237,18 @@ export default function Settings() {
           <div>
             <h2 className="font-semibold text-ink">Sensor configuration</h2>
             <p className="mt-1 text-sm text-muted">
-              Planned settings for the dual-IMU wearable.
+              Sensor configuration for the wearable.
             </p>
           </div>
         </div>
 
         <SettingRow
-          title="Target sampling rate"
-          description="Intended IMU sampling frequency. Changing this value currently changes only the saved UI setting."
+          title="Sampling rate"
+          description="Fixed ESP32 wearable hardware sampling frequency (20ms interval / DT = 0.02s)."
         >
-          <select
-            value={settings.sampleRate}
-            onChange={(event) =>
-              updateSetting('sampleRate', Number(event.target.value))
-            }
-            className="rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-teal-600"
-          >
-            <option value={25}>25 Hz</option>
-            <option value={50}>50 Hz (planned default)</option>
-            <option value={100}>100 Hz</option>
-            <option value={200}>200 Hz</option>
-          </select>
+          <span className="inline-flex items-center rounded-lg border border-line bg-slate-50 px-3 py-2 text-sm font-semibold text-ink">
+            50 Hz (Hardware locked)
+          </span>
         </SettingRow>
 
         <SettingRow
@@ -391,20 +382,20 @@ export default function Settings() {
               {isConnected ? 'ESP32 Wearable Node' : 'Awaiting Connection'}
             </p>
             <p className="mt-1 text-xs text-muted">
-              {isConnected ? 'Dual MPU-6050 I²C Stream' : 'Ready to pair via Connect page'}
+              {isConnected ? 'MPU-6050 I²C Stream' : 'Ready to pair via Connect page'}
             </p>
           </div>
 
           <div className="rounded-lg border border-line p-4">
             <div className="flex items-center gap-2 text-sm text-muted">
               <Zap size={16} />
-              Target sampling rate
+              Sampling rate
             </div>
             <p className="mt-2 font-semibold text-ink">
-              {settings.sampleRate} Hz
+              50 Hz (Locked)
             </p>
             <p className="mt-1 text-xs text-muted">
-              Firmware transmission frequency.
+              Hardware transmission frequency.
             </p>
           </div>
 
