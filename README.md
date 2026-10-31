@@ -1,4 +1,4 @@
-# 🦿 KneeGait-Edge: Edge-AI Enabled Wearable Gait Kinematics & Antalgic Anomaly Classification
+# KneeGait-Edge: Edge-AI Enabled Wearable Gait Kinematics & Antalgic Anomaly Classification
 
 > **A low-cost, clinical-grade wearable biomechanical system and interactive companion dashboard for real-time knee joint kinematics, gait-phase segmentation, and early antalgic "stiff-knee" anomaly detection in Knee Osteoarthritis (KOA).**
 
