@@ -230,7 +230,7 @@ Based on landmark clinical gait biomechanics (Bytyqi et al., 2014; PMC4037512), 
 ### 6. Fixed-Point Integer Quantization ($Q$-Format Scaling)
 For ultra-low-power microcontrollers lacking hardware floating-point units (FPUs) or operating in strict integer registers, floating-point features are converted into signed 16-bit integers (`int16_t`) using fixed scaling factors:
 
-$$x_{\text{fixed}} = \operatorname{round}\left( x_{\text{float}} \times S_{\text{factor}} \right)$$
+$$x_{\text{fixed}} = \text{round}\left( x_{\text{float}} \times S_{\text{factor}} \right)$$
 
 | Canonical Feature | Unit | Scale Factor ($S_{\text{factor}}$) | Scaled Range (`int16_t`) | Precision |
 | :--- | :---: | :---: | :---: | :---: |

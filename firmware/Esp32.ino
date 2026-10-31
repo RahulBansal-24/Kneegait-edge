@@ -1,6 +1,5 @@
 /**
  * KneeGait-Edge: Phone-Powered Mobile Data Logger
- * Hackathon: ZINNOVATIO 4.0 (Chandigarh University)
  * Hardware Lead: Prateek Dhar Dwivedi
  */
 
