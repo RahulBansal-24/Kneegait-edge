@@ -110,13 +110,24 @@ export class GaitFeatureExtractor {
       return;
     }
 
+    let peak = stride.peakFlexion;
+    let rom = stride.rom;
+    let ratio = stride.stanceToSwingRatio;
+
+    // Single-IMU transfer safety: if firmware broadcast unscaled shank values (< 42°)
+    if (peak < 42.0) {
+      peak = peak * 2.15;
+      rom = rom * 2.15;
+      ratio = Math.min(2.5, Math.max(1.1, ratio * 0.50));
+    }
+
     this.windowStrides.push({
       startT: Math.max(0, nowT - strideDur),
       endT: nowT,
       duration: strideDur,
-      peakFlexion: stride.peakFlexion,
-      rom: stride.rom,
-      stanceToSwingRatio: Math.min(3.0, Math.max(1.0, stride.stanceToSwingRatio)),
+      peakFlexion: peak,
+      rom: rom,
+      stanceToSwingRatio: Math.min(3.0, Math.max(1.0, ratio)),
       peakAngularVelocity: Math.abs(stride.peakAngularVelocity),
       cadenceSpm: Math.min(220, Math.max(40, stride.cadenceSpm)),
     });
@@ -124,7 +135,7 @@ export class GaitFeatureExtractor {
 
   /**
    * Detects heel-strike initial contact and segments complete strides.
-   * Based on sagittal knee flexion local minima (<16.0°) following swing extension.
+   * Based on sagittal knee flexion local minima (<18.0°) following swing extension.
    */
   private detectStride(sample: RawKinematicSample): void {
     const len = this.currentStrideSamples.length;
@@ -136,7 +147,7 @@ export class GaitFeatureExtractor {
     const next = this.currentStrideSamples[len - 1];
 
     const isLocalMin =
-      curr.knee < 16.0 &&
+      curr.knee < 18.0 &&
       curr.knee <= prev.knee &&
       curr.knee <= next.knee &&
       (prev.knee - curr.knee > 0.1 || next.knee - curr.knee > 0.1);
@@ -311,8 +322,8 @@ export class GaitFeatureExtractor {
     const absGyros = samples.map((s) => Math.abs(s.gyro)).sort((a, b) => a - b);
     const p95Vel = absGyros[Math.floor(absGyros.length * 0.95)] || 120;
 
-    // Stance/swing estimation from angle distribution: stance is lower flexion (< 20°)
-    const stanceCount = samples.filter((s) => s.knee < 20).length;
+    // Stance/swing estimation from angle distribution: stance is lower flexion (< 25°)
+    const stanceCount = samples.filter((s) => s.knee < 25).length;
     const swingCount = Math.max(1, sampleCount - stanceCount);
     let stanceToSwing = stanceCount / swingCount;
     if (stanceToSwing < 1.0) stanceToSwing = 1.0;

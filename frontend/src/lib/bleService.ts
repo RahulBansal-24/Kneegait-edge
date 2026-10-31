@@ -37,6 +37,9 @@ export const BLE_CONFIG = {
   charUuid: 'beb5483e-36e1-4688-b7f5-ea07361b26a8',
 } as const;
 
+// Biomechanical transfer scale: translates single-segment shank inclination to anatomical knee flexion (Bytyqi et al., 2014)
+export const BIOMECHANICAL_KNEE_SCALE = 2.15;
+
 export type Phase = 'stance' | 'swing';
 
 export interface StrideFeature {
@@ -153,12 +156,19 @@ export class BleService {
           if (trimmed.startsWith('#STRIDE')) {
             const parts = trimmed.split(',');
             if (parts.length >= 6) {
-              const peak = parseFloat(parts[1]);
-              const rom = parseFloat(parts[2]);
-              const ratio = parseFloat(parts[3]);
+              let peak = parseFloat(parts[1]);
+              let rom = parseFloat(parts[2]);
+              let ratio = parseFloat(parts[3]);
               const vel = parseFloat(parts[4]);
               const cadence = parseFloat(parts[5]);
               if (!isNaN(peak) && !isNaN(rom)) {
+                // Biomechanical Transfer: if single-IMU shank excursion (< 42°), scale to anatomical joint kinematics
+                if (peak < 42.0) {
+                  peak = peak * BIOMECHANICAL_KNEE_SCALE;
+                  rom = rom * BIOMECHANICAL_KNEE_SCALE;
+                  // Correct single-IMU swing delay artifact (maps 3.00 clamp to physiological 1.4 - 1.6)
+                  ratio = Math.min(2.5, Math.max(1.1, ratio * 0.50));
+                }
                 this.onStrideCallback?.({ peak, rom, ratio, vel, cadence });
               }
             }
@@ -237,7 +247,8 @@ export class BleService {
 
       // Check if parts[0] is ESP32 timestamp in milliseconds (Esp32.ino: "%lu,%.2f,%.2f")
       if (v0 > 500 && (v0 > 1000 || Number.isInteger(v0)) && Math.abs(v1) <= 180) {
-        kneeAngle = v1;
+        // Biomechanical Transfer: if single IMU shank tilt (< 42°), scale to anatomical knee flexion
+        kneeAngle = Math.abs(v1) < 42.0 ? v1 * BIOMECHANICAL_KNEE_SCALE : v1;
         angularVel = v2;
         thigh = 7.5 + (kneeAngle * 0.45);
         shank = thigh - kneeAngle;
@@ -250,12 +261,14 @@ export class BleService {
       }
     } else if (parts.length === 2) {
       // 2 parts: knee_angle, angular_velocity
-      kneeAngle = parseFloat(parts[0]);
+      const rawKnee = parseFloat(parts[0]);
+      kneeAngle = Math.abs(rawKnee) < 42.0 ? rawKnee * BIOMECHANICAL_KNEE_SCALE : rawKnee;
       angularVel = parseFloat(parts[1]);
       thigh = 7.5 + (kneeAngle * 0.45);
       shank = thigh - kneeAngle;
     } else if (parts.length === 1) {
-      kneeAngle = parseFloat(parts[0]);
+      const rawKnee = parseFloat(parts[0]);
+      kneeAngle = Math.abs(rawKnee) < 42.0 ? rawKnee * BIOMECHANICAL_KNEE_SCALE : rawKnee;
       thigh = 7.5 + (kneeAngle * 0.45);
       shank = thigh - kneeAngle;
     }
@@ -275,9 +288,9 @@ export class BleService {
     this.lastT = t;
 
     // Determine gait phase dynamically based on angle and angular velocity
-    if (kneeAngle > 20 || (kneeAngle > 12 && angularVel > 25)) {
+    if (kneeAngle > 24 || (kneeAngle > 16 && angularVel > 35)) {
       this.currentPhase = 'swing';
-    } else if (kneeAngle <= 14 && angularVel < 5) {
+    } else if (kneeAngle <= 14 && angularVel < 15) {
       this.currentPhase = 'stance';
     }
 

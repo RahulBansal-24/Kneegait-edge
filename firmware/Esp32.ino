@@ -26,6 +26,7 @@
 
 const float ALPHA = 0.96f; // Bytyqi et al. 2014 / Rhudy et al. 2024
 const float DT = 0.02f;    // 50Hz (20ms)
+const float BIOMECHANICAL_TRANSFER_SCALE = 2.15f; // Single shank IMU to anatomical knee flexion (Bytyqi et al. 2014)
 
 BLEServer* pServer = nullptr;
 BLECharacteristic* pDataChar = nullptr;
@@ -134,15 +135,15 @@ void processStride(float knee, float gyro, unsigned long now) {
     if (current_phase == STANCE) {
         stance_count++;
         // Toe-off trigger: knee flexes past 18° and leg swings forward (> 35°/s)
-        if (knee > 18.0f && gyro > 35.0f) {
+        if (knee > 25.0f && gyro > 35.0f) {
             current_phase = SWING;
         }
     } else {
         swing_count++;
         // Heel-strike detection: angle drops back towards extension (< 16°)
         // Must be at least 550ms to reject impact bounce
-        bool heel_strike = (knee < 16.0f && gyro < 15.0f) || 
-                           ((now - stride_start_time) > 650 && knee < (stride_peak - 14.0f) && abs_vel < 25.0f);
+        bool heel_strike = (knee < 18.0f && gyro < 20.0f) || 
+                           ((now - stride_start_time) > 650 && knee < (stride_peak - 20.0f) && abs_vel < 25.0f);
 
         if (heel_strike && (now - stride_start_time) >= 550) {
             float duration_s = (now - stride_start_time) / 1000.0f;
@@ -238,7 +239,8 @@ void loop() {
 
             // Complementary filter (alpha = 0.96)
             angle_est = ALPHA * (angle_est + gyro_rate * DT) + (1.0f - ALPHA) * acc_pitch;
-            float knee_angle = fabs(angle_est);
+            float shank_pitch = fabs(angle_est);
+            float knee_angle = shank_pitch * BIOMECHANICAL_TRANSFER_SCALE;
 
             // 1. Process stride cycle and broadcast 5 ML features upon completion
             processStride(knee_angle, gyro_rate, now);
