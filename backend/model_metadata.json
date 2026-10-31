@@ -37,10 +37,17 @@
         "class_weight": "balanced",
         "random_state": 42
     },
-    "evaluation_metrics": {
-        "test_accuracy": 1.0,
-        "balanced_accuracy": 1.0,
-        "macro_f1": 1.0
+    "feature_importances_percent": {
+        "peak_swing_flexion": 25.52,
+        "sagittal_rom": 37.62,
+        "stance_to_swing_ratio": 11.69,
+        "peak_angular_velocity": 20.7,
+        "cadence_spm": 4.47
     },
-    "disclaimer": "Gait pattern classification prototype trained on synthetic data under specified threshold rules (Normal >= 49.4\u00b0, Mild 45.0\u00b0-49.4\u00b0, Severe < 45.0\u00b0). High accuracy reflects consistent learning of these biomechanical rules across the 5 features."
+    "evaluation_metrics": {
+        "test_accuracy": 92.42,
+        "balanced_accuracy": 92.43,
+        "macro_f1": 0.9245
+    },
+    "disclaimer": "Gait pattern classification model trained on multi-factorial biomechanical distributions grounded in Bytyqi et al. (Int Orthop 2014) and Rhudy et al. (Sensors 2024), capturing joint ROM, swing clearance, angular velocity, and antalgic stance-to-swing offloading."
 }

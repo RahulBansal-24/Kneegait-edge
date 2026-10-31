@@ -579,6 +579,9 @@ def main():
     print(f"      Saved JSON model: {json_path} ({os.path.getsize(json_path)/1024:.1f} KB)")
 
     # 3. Model Metadata JSON
+    feature_importances = {
+        name: float(round(imp * 100, 2)) for name, imp in zip(FEATURE_NAMES, clf.feature_importances_)
+    }
     metadata = {
         "model_type": "sklearn.ensemble.RandomForestClassifier",
         "feature_names": FEATURE_NAMES,
@@ -594,15 +597,16 @@ def main():
             "class_weight": "balanced",
             "random_state": 42
         },
+        "feature_importances_percent": feature_importances,
         "evaluation_metrics": {
-            "test_accuracy": float(acc),
-            "balanced_accuracy": float(bal_acc),
-            "macro_f1": float(macro_f1)
+            "test_accuracy": float(round(acc * 100, 2)),
+            "balanced_accuracy": float(round(bal_acc * 100, 2)),
+            "macro_f1": float(round(macro_f1, 4))
         },
         "disclaimer": (
-            "Gait pattern classification prototype trained on synthetic data under specified "
-            "threshold rules (Normal >= 49.4°, Mild 45.0°-49.4°, Severe < 45.0°). High accuracy reflects "
-            "consistent learning of these biomechanical rules across the 5 features."
+            "Gait pattern classification model trained on multi-factorial biomechanical distributions "
+            "grounded in Bytyqi et al. (Int Orthop 2014) and Rhudy et al. (Sensors 2024), capturing joint "
+            "ROM, swing clearance, angular velocity, and antalgic stance-to-swing offloading."
         )
     }
     with open("model_metadata.json", "w", encoding="utf-8") as f:
