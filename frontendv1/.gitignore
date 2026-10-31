@@ -1,0 +1,31 @@
+node_modules/
+dist/
+dev-dist/
+.env
+.env.*
+!.env.example
+.DS_Store
+
+# Proprietary AI pipeline, models, and datasets
+ai_pipeline-not-to-be-used/
+__pycache__/
+*.pyc
+*.joblib
+*.csv
+
+# Raw hardware logs and generated test data
+*.txt
+*.log
+*.png
+
+# Confidential project documentation & blueprints
+NOVELTY.md
+TEAM_BLUEPRINT.md
+AI_README.md
+USER_GUIDE.md
+
+# Work folder and build outputs
+Work/
+work/
+*.pdf
+
