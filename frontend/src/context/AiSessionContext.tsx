@@ -81,7 +81,7 @@ const TOTAL_WINDOWS = 6;
 const AiSessionContext = createContext<AiSessionContextValue | null>(null);
 
 export function AiSessionProvider({ children }: { children: React.ReactNode }) {
-  const { status: bleStatus, subscribe } = useBle();
+  const { status: bleStatus, subscribe, subscribeStride } = useBle();
   const isBleConnected = bleStatus === 'connected';
 
   const [status, setStatus] = useState<AiSessionStatus>('idle');
@@ -123,20 +123,35 @@ export function AiSessionProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isBleConnected, status]);
 
-  // Subscribe directly to 50Hz incoming BLE samples without polling
+  // Stably subscribe to BLE telemetry and firmware stride broadcasts
   useEffect(() => {
-    if (status !== 'running') return;
-
-    const unsubscribe = subscribe((sample) => {
-      featureExtractorRef.current.ingestSample({
-        t: sample.t,
-        knee: sample.knee,
-        gyro: sample.gyro,
-      });
+    const unsubSample = subscribe((sample) => {
+      if (sessionActiveRef.current) {
+        featureExtractorRef.current.ingestSample({
+          t: sample.t,
+          knee: sample.knee,
+          gyro: sample.gyro,
+        });
+      }
     });
 
-    return unsubscribe;
-  }, [status, subscribe]);
+    const unsubStride = subscribeStride?.((stride) => {
+      if (sessionActiveRef.current) {
+        featureExtractorRef.current.ingestStrideFeature({
+          peakFlexion: stride.peak,
+          rom: stride.rom,
+          stanceToSwingRatio: stride.ratio,
+          peakAngularVelocity: stride.vel,
+          cadenceSpm: stride.cadence,
+        });
+      }
+    });
+
+    return () => {
+      unsubSample();
+      unsubStride?.();
+    };
+  }, [subscribe, subscribeStride]);
 
   /**
    * Evaluates the completed 30-second window and executes local model inference.

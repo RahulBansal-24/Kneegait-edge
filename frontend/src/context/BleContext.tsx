@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { bleService, BleGaitSample, BleStatus, Phase } from '../lib/bleService';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { bleService, BleGaitSample, BleStatus, Phase, StrideFeature } from '../lib/bleService';
 import { THRESHOLDS } from '../lib/thresholds';
 
 export interface GaitMetrics {
@@ -32,6 +32,7 @@ interface BleContextValue {
   disconnect: () => void;
   logs: string[];
   subscribe: (callback: (sample: BleGaitSample) => void) => () => void;
+  subscribeStride: (callback: (stride: StrideFeature) => void) => () => void;
 }
 
 const initialMetrics: GaitMetrics = {
@@ -67,6 +68,7 @@ export function BleProvider({ children }: { children: React.ReactNode }) {
 
   const buffer = useRef<BleGaitSample[]>([]);
   const sampleListeners = useRef<Set<(sample: BleGaitSample) => void>>(new Set());
+  const strideListeners = useRef<Set<(stride: StrideFeature) => void>>(new Set());
   const maxLen = THRESHOLDS.strideWindowSec * THRESHOLDS.sampleRateHz;
 
   // Gait feature tracking variables
@@ -82,12 +84,19 @@ export function BleProvider({ children }: { children: React.ReactNode }) {
     setLogs((prev) => [`${time}  ${msg}`, ...prev].slice(0, 10));
   };
 
-  const subscribe = (callback: (sample: BleGaitSample) => void) => {
+  const subscribe = useCallback((callback: (sample: BleGaitSample) => void) => {
     sampleListeners.current.add(callback);
     return () => {
       sampleListeners.current.delete(callback);
     };
-  };
+  }, []);
+
+  const subscribeStride = useCallback((callback: (stride: StrideFeature) => void) => {
+    strideListeners.current.add(callback);
+    return () => {
+      strideListeners.current.delete(callback);
+    };
+  }, []);
 
   const connect = async () => {
     setErrorMessage(null);
@@ -164,12 +173,21 @@ export function BleProvider({ children }: { children: React.ReactNode }) {
         (newStatus, errorMsg) => {
           setStatus(newStatus);
           if (newStatus === 'connected') {
-            addLog(`Connected to ${bleService.deviceName}. Receiving 50Hz telemetry.`);
+            addLog(`Connected to ${bleService.deviceName}. Receiving telemetry.`);
           } else if (newStatus === 'disconnected') {
             addLog('Device disconnected.');
           } else if (newStatus === 'error') {
             setErrorMessage(errorMsg || 'Bluetooth error');
             addLog(`Error: ${errorMsg || 'Connection failed'}`);
+          }
+        },
+        (stride) => {
+          for (const listener of strideListeners.current) {
+            try {
+              listener(stride);
+            } catch (err) {
+              console.error('Error in stride subscriber:', err);
+            }
           }
         }
       );
@@ -207,6 +225,7 @@ export function BleProvider({ children }: { children: React.ReactNode }) {
         disconnect,
         logs,
         subscribe,
+        subscribeStride,
       }}
     >
       {children}

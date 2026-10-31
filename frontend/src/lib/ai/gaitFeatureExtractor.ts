@@ -1,5 +1,5 @@
 // Real-Time Gait Feature Extractor for KneeGait-Edge
-// Extracts the 5 canonical features from continuous 50Hz wearable stream for Random Forest inference.
+// Extracts the 5 canonical features from continuous wearable stream for Random Forest inference.
 // Features: [peak_swing_flexion, sagittal_rom, stance_to_swing_ratio, peak_angular_velocity, cadence_spm]
 
 export interface RawKinematicSample {
@@ -33,7 +33,7 @@ export interface WindowFeatureResult {
 const KNEEGAIT_MIN_STRIDE_S = 0.55;  // ~218 spm max
 const KNEEGAIT_MAX_STRIDE_S = 2.40;  // ~50 spm min
 const KNEEGAIT_REFRACTORY_S = 0.40;  // 400ms debounce
-const MIN_SAMPLES_PER_WINDOW = 600;  // Minimum 40% of 1,500 expected at 50Hz
+const MIN_SAMPLES_PER_WINDOW = 100;  // Realistic floor (~3.3+ Hz) for Web Bluetooth GATT notification rate
 
 export class GaitFeatureExtractor {
   private windowSamples: RawKinematicSample[] = [];
@@ -51,16 +51,19 @@ export class GaitFeatureExtractor {
   startNewWindow(): void {
     this.windowSamples = [];
     this.windowStrides = [];
-    this.currentStrideSamples = [];
+    // Retain tail of stride buffer to avoid dropping a stride that crosses window boundaries
+    if (this.currentStrideSamples.length > 20) {
+      this.currentStrideSamples = this.currentStrideSamples.slice(-15);
+    }
   }
 
   /**
-   * Ingests a new 50Hz sensor sample into the active window buffer.
+   * Ingests a new sensor sample into the active window buffer.
    */
   ingestSample(sample: RawKinematicSample): void {
-    // Validate monotonic time
-    if (this.lastSample && sample.t <= this.lastSample.t) {
-      return; // Ignore duplicate or backwards packet
+    // Validate monotonic time (allow equal timestamps within batch, reject backwards packets)
+    if (this.lastSample && sample.t < this.lastSample.t) {
+      return;
     }
 
     // Estimate angular velocity from differential if gyro reading is absent/zero
@@ -89,8 +92,39 @@ export class GaitFeatureExtractor {
   }
 
   /**
+   * Ingests a stride feature broadcast directly from the firmware (#STRIDE).
+   */
+  ingestStrideFeature(stride: {
+    peakFlexion: number;
+    rom: number;
+    stanceToSwingRatio: number;
+    peakAngularVelocity: number;
+    cadenceSpm: number;
+  }): void {
+    if (stride.peakFlexion < 10.0 || stride.rom < 5.0) return;
+    const nowT = this.lastSample ? this.lastSample.t : (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+    const strideDur = stride.cadenceSpm > 0 ? (120.0 / Math.min(220, Math.max(40, stride.cadenceSpm))) : 1.0;
+
+    // Avoid duplicate if recent stride was already logged within 350ms
+    if (this.windowStrides.some((s) => Math.abs(s.endT - nowT) < 0.35)) {
+      return;
+    }
+
+    this.windowStrides.push({
+      startT: Math.max(0, nowT - strideDur),
+      endT: nowT,
+      duration: strideDur,
+      peakFlexion: stride.peakFlexion,
+      rom: stride.rom,
+      stanceToSwingRatio: Math.min(3.0, Math.max(1.0, stride.stanceToSwingRatio)),
+      peakAngularVelocity: Math.abs(stride.peakAngularVelocity),
+      cadenceSpm: Math.min(220, Math.max(40, stride.cadenceSpm)),
+    });
+  }
+
+  /**
    * Detects heel-strike initial contact and segments complete strides.
-   * Based on sagittal knee flexion local minima (<15.0°) following swing extension.
+   * Based on sagittal knee flexion local minima (<16.0°) following swing extension.
    */
   private detectStride(sample: RawKinematicSample): void {
     const len = this.currentStrideSamples.length;
@@ -137,7 +171,7 @@ export class GaitFeatureExtractor {
       (s) => s.t >= this.lastHsT! && s.t <= tStrike
     );
 
-    if (strideSamples.length >= 8) {
+    if (strideSamples.length >= 6) {
       let maxFlex = -Infinity;
       let minFlex = Infinity;
       let maxVel = 0;
@@ -160,8 +194,8 @@ export class GaitFeatureExtractor {
         }
       }
 
-      if (maxFlex > 25.0) {
-        // Valid dynamic gait stride (filters out static sitting/standing tremor)
+      if (maxFlex > 20.0) {
+        // Valid dynamic gait stride
         const tStance = Math.max(0.05, valleyT - this.lastHsT);
         const tSwing = Math.max(0.05, tStrike - valleyT);
         let stanceToSwing = tStance / tSwing;
@@ -170,16 +204,19 @@ export class GaitFeatureExtractor {
 
         const cadenceSpm = 2.0 * (60.0 / strideDur);
 
-        this.windowStrides.push({
-          startT: this.lastHsT,
-          endT: tStrike,
-          duration: strideDur,
-          peakFlexion: maxFlex,
-          rom: maxFlex - minFlex,
-          stanceToSwingRatio: stanceToSwing,
-          peakAngularVelocity: maxVel,
-          cadenceSpm,
-        });
+        // Avoid duplicate if already present
+        if (!this.windowStrides.some((s) => Math.abs(s.endT - tStrike) < 0.35)) {
+          this.windowStrides.push({
+            startT: this.lastHsT,
+            endT: tStrike,
+            duration: strideDur,
+            peakFlexion: maxFlex,
+            rom: maxFlex - minFlex,
+            stanceToSwingRatio: stanceToSwing,
+            peakAngularVelocity: maxVel,
+            cadenceSpm,
+          });
+        }
       }
     }
 
@@ -199,7 +236,7 @@ export class GaitFeatureExtractor {
       sampleCount >= 2 ? samples[sampleCount - 1].t - samples[0].t : 0;
 
     // Check sample count sufficiency
-    if (sampleCount < MIN_SAMPLES_PER_WINDOW) {
+    if (sampleCount < MIN_SAMPLES_PER_WINDOW && this.windowStrides.length === 0) {
       return {
         isValid: false,
         status: 'insufficient_samples',
@@ -213,7 +250,7 @@ export class GaitFeatureExtractor {
     }
 
     // If strides were detected, use median of strides across the window
-    if (this.windowStrides.length >= 2) {
+    if (this.windowStrides.length >= 1) {
       const peaks = this.windowStrides.map((s) => s.peakFlexion).sort((a, b) => a - b);
       const roms = this.windowStrides.map((s) => s.rom).sort((a, b) => a - b);
       const ratios = this.windowStrides.map((s) => s.stanceToSwingRatio).sort((a, b) => a - b);
@@ -249,19 +286,19 @@ export class GaitFeatureExtractor {
       };
     }
 
-    // Fallback if subject walked with low amplitude or strides weren't cleanly segmented:
+    // Fallback if strides weren't cleanly segmented:
     // Extract envelope kinematics from raw samples
     const kneeAngles = samples.map((s) => s.knee).sort((a, b) => a - b);
     const p95 = kneeAngles[Math.floor(kneeAngles.length * 0.95)] || 0;
     const p05 = kneeAngles[Math.floor(kneeAngles.length * 0.05)] || 0;
     const rom = Math.max(0, p95 - p05);
 
-    if (rom < 10.0) {
+    if (rom < 8.0) {
       // Joint was essentially immobile during this 30s window
       return {
         isValid: false,
         status: 'no_movement',
-        statusMessage: 'Minimal knee movement detected during this 30s interval. Please walk continuously.',
+        statusMessage: 'Minimal knee movement detected (ROM < 8°). Patient appeared stationary during this 30s window.',
         sampleCount,
         expectedSampleCount,
         strideCount: 0,
@@ -282,7 +319,7 @@ export class GaitFeatureExtractor {
     if (stanceToSwing > 3.0) stanceToSwing = 3.0;
 
     // Estimate cadence from duration
-    const cadenceEst = Math.min(130, Math.max(60, 95));
+    const cadenceEst = 100.0;
 
     return {
       isValid: true,
