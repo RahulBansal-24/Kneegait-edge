@@ -84,7 +84,7 @@ export default function App() {
     <BleProvider>
       <AiSessionProvider>
         <div className="min-h-screen lg:flex">
-          <nav className="flex flex-col justify-between border-b border-line bg-white p-3 lg:w-56 lg:border-b-0 lg:border-r lg:p-4">
+          <nav className="no-print print:hidden flex flex-col justify-between border-b border-line bg-white p-3 lg:w-56 lg:border-b-0 lg:border-r lg:p-4">
             <div className="space-y-1">
               <div className="mb-0 hidden px-3 py-2 lg:mb-4 lg:block">
                 <p className="text-lg font-bold text-ink">KneeGait-Edge</p>
