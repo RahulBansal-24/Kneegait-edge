@@ -91,12 +91,16 @@ export default function AiCompletionModal() {
             <span className="text-xs font-medium uppercase tracking-wider text-muted">
               Consolidated 3-Class Prediction
             </span>
-            <div className="mt-2 flex items-center justify-center gap-2">
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
               <span
                 className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-bold shadow-sm ${theme.badgeBg}`}
               >
                 <span className={`h-2.5 w-2.5 rounded-full ${theme.dotBg}`} />
                 {finalDisplayLabel}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-mono font-bold text-slate-800 shadow-sm">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Confidence:</span>
+                {overallConfidence}%
               </span>
             </div>
             <p className="mt-3 text-xs text-slate-600 leading-relaxed max-w-md mx-auto">

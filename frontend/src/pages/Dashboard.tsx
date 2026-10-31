@@ -120,7 +120,7 @@ export default function Dashboard() {
                         finalResult.finalClassId
                       )}`}
                     />
-                    {finalResult.finalDisplayLabel} · {finalResult.overallConfidence}%
+                    {finalResult.finalDisplayLabel} · {finalResult.overallConfidence}% Confidence
                   </span>
                 </div>
                 <p className="mt-1 text-xs text-slate-600 line-clamp-1 sm:line-clamp-none">

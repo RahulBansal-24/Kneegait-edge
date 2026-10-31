@@ -209,18 +209,24 @@ export default function AiAnalysisLogSection() {
               </div>
             </div>
 
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold ${
-                getClassTheme(finalResult.finalClassId).badge
-              }`}
-            >
+            <div className="flex items-center gap-2">
               <span
-                className={`h-2 w-2 rounded-full ${
-                  getClassTheme(finalResult.finalClassId).dot
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold ${
+                  getClassTheme(finalResult.finalClassId).badge
                 }`}
-              />
-              {finalResult.finalDisplayLabel}
-            </span>
+              >
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    getClassTheme(finalResult.finalClassId).dot
+                  }`}
+                />
+                {finalResult.finalDisplayLabel}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-teal-300 bg-white px-3 py-1 text-xs font-mono font-bold text-teal-800 shadow-sm">
+                <span className="text-[10px] uppercase font-semibold text-teal-600">Confidence</span>
+                {finalResult.overallConfidence}%
+              </span>
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-[1fr_280px]">
@@ -363,7 +369,11 @@ export default function AiAnalysisLogSection() {
                           <span className={`h-1.5 w-1.5 rounded-full ${theme.dot}`} />
                           {log.predictedDisplayLabel}
                         </span>
-                        <span className="text-xs font-mono font-bold text-ink">
+                        <span
+                          className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-mono font-bold text-slate-800 shadow-xs"
+                          title="Random Forest class probability confidence"
+                        >
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Conf:</span>
                           {log.confidence}%
                         </span>
                       </div>
@@ -433,10 +443,37 @@ export default function AiAnalysisLogSection() {
                       </div>
                     </div>
 
-                    {/* Window Probabilities Bar */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-slate-600">
-                      <span>Probabilities:</span>
-                      <div className="flex items-center gap-3 font-mono">
+                    {/* Window Probabilities & Confidence Bar */}
+                    <div className="space-y-1.5 rounded-lg border border-line bg-white p-3">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-slate-700">
+                          AI Prediction Confidence:
+                        </span>
+                        <span className="font-mono font-bold text-teal-800">
+                          {log.confidence}% ({log.predictedDisplayLabel})
+                        </span>
+                      </div>
+
+                      {/* Stacked probability visual bar */}
+                      <div className="flex h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className="bg-emerald-500 transition-all duration-300"
+                          style={{ width: `${log.probabilities[0] * 100}%` }}
+                          title={`Normal: ${(log.probabilities[0] * 100).toFixed(1)}%`}
+                        />
+                        <div
+                          className="bg-amber-500 transition-all duration-300"
+                          style={{ width: `${log.probabilities[1] * 100}%` }}
+                          title={`Mild: ${(log.probabilities[1] * 100).toFixed(1)}%`}
+                        />
+                        <div
+                          className="bg-rose-500 transition-all duration-300"
+                          style={{ width: `${log.probabilities[2] * 100}%` }}
+                          title={`Severe: ${(log.probabilities[2] * 100).toFixed(1)}%`}
+                        />
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5 text-[11px] font-mono">
                         <span className="text-emerald-700">
                           Normal: {(log.probabilities[0] * 100).toFixed(1)}%
                         </span>
