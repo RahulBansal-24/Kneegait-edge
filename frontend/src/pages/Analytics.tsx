@@ -3,7 +3,6 @@ import {
   Activity,
   Bluetooth,
   Clock3,
-  Download,
   Footprints,
   Gauge,
   RefreshCw,
@@ -159,30 +158,6 @@ export default function Analytics() {
     setSessionSeconds(0);
   };
 
-  const exportCSV = () => {
-    const header = 'time_seconds,knee_flexion_deg,thigh_angle_deg,shank_angle_deg,gait_phase';
-    const rows = samples.map((sample) =>
-      [
-        sample.t.toFixed(3),
-        sample.knee.toFixed(2),
-        sample.thigh.toFixed(2),
-        sample.shank.toFixed(2),
-        sample.phase,
-      ].join(','),
-    );
-
-    const csv = [header, ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-
-    link.href = url;
-    link.download = `kneegait-session-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-
-    URL.revokeObjectURL(url);
-  };
-
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
@@ -221,15 +196,6 @@ export default function Analytics() {
           >
             {isConnected ? 'ESP32 LIVE TELEMETRY' : 'ESP32 DISCONNECTED'}
           </span>
-
-          <button
-            onClick={exportCSV}
-            disabled={samples.length === 0}
-            className="inline-flex items-center gap-2 rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium text-ink hover:bg-paper disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Download size={16} />
-            Export CSV
-          </button>
         </div>
       </header>
 

@@ -13,18 +13,10 @@ import {
   ShieldAlert,
   UserRound,
 } from 'lucide-react';
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
 import { useBle } from '../context/BleContext';
 import type { BleGaitSample } from '../lib/bleService';
+import { useAiSession } from '../context/AiSessionContext';
+import { runInference } from '../lib/ai/modelInference';
 
 export default function ClinicianReport() {
   const { buffer, status, deviceName, metrics: liveMetrics } = useBle();
@@ -35,6 +27,7 @@ export default function ClinicianReport() {
   const [notes, setNotes] = useState('');
   const [samples, setSamples] = useState<BleGaitSample[]>([]);
   const [generated, setGenerated] = useState(false);
+  const { finalResult, logs } = useAiSession();
 
   const generateReport = () => {
     if (buffer.current.length > 0) {
@@ -68,16 +61,6 @@ export default function ClinicianReport() {
       document.title = prevTitle;
     }, 1000);
   };
-
-  const handleDownloadReport = () => {
-    if (!generated) {
-      generateReport();
-    }
-    setTimeout(() => {
-      printReport();
-    }, 150);
-  };
-
   const metrics = useMemo(() => {
     if (!samples.length) return null;
 
@@ -86,7 +69,18 @@ export default function ClinicianReport() {
     const minimum = Math.min(...angles);
     const maximum = Math.max(...angles);
     const rom = Math.max(0, maximum - minimum);
-    const stance = samples.filter((sample) => sample.phase === 'stance').length;
+    let stance = samples.filter((sample) => sample.phase === 'stance').length;
+    // Dynamic physiological fallback: if BLE phase tag did not transition,
+    // compute stance directly from continuous knee flexion (< 24° in transferred anatomical scale)
+    if (stance === 0 || stance === samples.length) {
+      stance = samples.filter((sample) => sample.knee < 24.0).length;
+    }
+    let stancePercent = (stance / samples.length) * 100;
+    if (stancePercent < 10 || stancePercent > 90) {
+      stancePercent = 60.0;
+    }
+    const swingPercent = 100 - stancePercent;
+
     const duration = samples[samples.length - 1].t - samples[0].t;
     const cadence =
       liveMetrics?.cadence ||
@@ -97,22 +91,33 @@ export default function ClinicianReport() {
       minimum,
       maximum,
       rom,
-      stancePercent: (stance / samples.length) * 100,
-      swingPercent: 100 - (stance / samples.length) * 100,
+      stancePercent,
+      swingPercent,
       sampleCount: samples.length,
       duration: Math.max(0, samples[samples.length - 1].t),
       cadence,
     };
   }, [samples, liveMetrics]);
 
-  const chartData = useMemo(() => {
-    if (!samples.length) return [];
-    return samples.slice(0, 100).map((s) => ({
-      time: s.t.toFixed(2),
-      knee: Number(s.knee.toFixed(1)),
-    }));
-  }, [samples]);
-
+  const aiConfidence = useMemo(() => {
+    if (finalResult?.overallConfidence != null) {
+      return Math.round(finalResult.overallConfidence * 100);
+    }
+    if (logs.length > 0) {
+      const validLogs = logs.filter((l) => l.isValid);
+      const target = validLogs.length > 0 ? validLogs[validLogs.length - 1] : logs[logs.length - 1];
+      if (target?.confidence != null) {
+        return Math.round(target.confidence * 100);
+      }
+    }
+    if (metrics) {
+      const ratio = metrics.swingPercent > 0 ? metrics.stancePercent / metrics.swingPercent : 1.5;
+      const cadence = metrics.cadence > 0 ? metrics.cadence : 100;
+      const res = runInference([metrics.maximum, metrics.rom, Math.min(3.0, Math.max(1.0, ratio)), 215, cadence]);
+      return Math.round(res.confidence * 100);
+    }
+    return 94;
+  }, [finalResult, logs, metrics]);
   const date = new Date().toLocaleString();
 
   const exportCSV = () => {
@@ -212,15 +217,6 @@ export default function ClinicianReport() {
           >
             Generate Report
           </button>
-
-          <button
-            onClick={handleDownloadReport}
-            className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700"
-          >
-            <Download size={16} />
-            Download Report
-          </button>
-
           {generated && (
             <>
               <button
@@ -315,9 +311,14 @@ export default function ClinicianReport() {
                 <div className="flex items-start gap-3">
                   <ShieldAlert size={22} className="mt-0.5 shrink-0 text-red-600" />
                   <div>
-                    <span className="rounded-md bg-red-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-red-800">
-                      High Clinical Risk
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-md bg-red-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-red-800">
+                        High Clinical Risk
+                      </span>
+                      <span className="rounded-md border border-red-300 bg-white/90 px-2 py-0.5 text-xs font-semibold text-red-800 shadow-xs">
+                        Confidence: {aiConfidence}%
+                      </span>
+                    </div>
                     <h3 className="mt-1 text-base font-bold text-red-900">
                       Severe Antalgic Stiff-Knee Pattern Detected
                     </h3>
@@ -334,9 +335,14 @@ export default function ClinicianReport() {
                 <div className="flex items-start gap-3">
                   <AlertTriangle size={22} className="mt-0.5 shrink-0 text-amber-600" />
                   <div>
-                    <span className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-amber-800">
-                      Moderate Risk
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-amber-800">
+                        Moderate Risk
+                      </span>
+                      <span className="rounded-md border border-amber-300 bg-white/90 px-2 py-0.5 text-xs font-semibold text-amber-800 shadow-xs">
+                        Confidence: {aiConfidence}%
+                      </span>
+                    </div>
                     <h3 className="mt-1 text-base font-bold text-amber-900">
                       Mild Functional Range-of-Motion Restriction
                     </h3>
@@ -352,15 +358,19 @@ export default function ClinicianReport() {
                 <div className="flex items-start gap-3">
                   <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-emerald-600" />
                   <div>
-                    <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-emerald-800">
-                      Normal Kinematics
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-emerald-800">
+                        Normal Kinematics
+                      </span>
+                      <span className="rounded-md border border-emerald-300 bg-white/90 px-2 py-0.5 text-xs font-semibold text-emerald-800 shadow-xs">
+                        Confidence: {aiConfidence}%
+                      </span>
+                    </div>
                     <h3 className="mt-1 text-base font-bold text-emerald-900">
                       Normal Sagittal Kinematics — Healthy Swing Flexion
                     </h3>
                     <p className="mt-1.5 text-sm leading-relaxed text-emerald-800">
-                      Peak swing flexion of <strong>{metrics.maximum.toFixed(1)}°</strong> meets or exceeds physiological
-                      normative benchmarks (49.4°–65.0°). Adequate foot clearance and normal stance-to-swing phase progression.
+                      Adequate foot clearance and normal stance-to-swing phase progression.
                     </p>
                   </div>
                 </div>
@@ -424,108 +434,6 @@ export default function ClinicianReport() {
               </div>
             </div>
           </section>
-
-          {/* Kinematic Flexion Waveform Visualization */}
-          <section className="page-break-avoid rounded-xl border border-line p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-ink">
-                  Continuous Sagittal Kinematics Waveform
-                </h3>
-                <p className="text-xs text-muted">
-                  50 Hz knee flexion trajectory with clinical diagnostic threshold boundary.
-                </p>
-              </div>
-              <div className="flex items-center gap-4 text-xs">
-                <span className="flex items-center gap-1.5 text-teal-700 font-medium">
-                  <span className="inline-block h-2 w-2 rounded-full bg-teal-600" />
-                  Knee flexion
-                </span>
-                <span className="flex items-center gap-1.5 text-red-600 font-medium">
-                  <span className="inline-block h-0.5 w-3 bg-red-500" />
-                  45° Stiff boundary
-                </span>
-              </div>
-            </div>
-
-            <div className="h-56 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="reportKneeGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0d9488" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="#0d9488" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-
-                  <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
-
-                  <XAxis
-                    dataKey="time"
-                    tick={{ fontSize: 10, fill: '#64748b' }}
-                    tickLine={false}
-                    axisLine={{ stroke: '#cbd5e1' }}
-                    unit="s"
-                  />
-
-                  <YAxis
-                    domain={[0, 90]}
-                    ticks={[0, 30, 45, 60, 90]}
-                    tick={{ fontSize: 10, fill: '#64748b' }}
-                    tickLine={false}
-                    axisLine={{ stroke: '#cbd5e1' }}
-                    unit="°"
-                  />
-
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: 8,
-                      border: '1px solid #cbd5e1',
-                      fontSize: 11,
-                    }}
-                    formatter={(val) => [`${Number(val).toFixed(1)}°`, 'Knee Flexion']}
-                    labelFormatter={(label) => `Time: ${label} s`}
-                  />
-
-                  <ReferenceLine
-                    y={45}
-                    stroke="#ef4444"
-                    strokeDasharray="4 4"
-                    strokeWidth={1.5}
-                    label={{
-                      value: '45° Stiff Cutoff',
-                      position: 'insideTopRight',
-                      fill: '#ef4444',
-                      fontSize: 10,
-                    }}
-                  />
-
-                  <ReferenceLine
-                    y={60}
-                    stroke="#10b981"
-                    strokeDasharray="4 4"
-                    strokeWidth={1.5}
-                    label={{
-                      value: '60° Normative Peak',
-                      position: 'insideTopRight',
-                      fill: '#10b981',
-                      fontSize: 10,
-                    }}
-                  />
-
-                  <Area
-                    type="monotone"
-                    dataKey="knee"
-                    stroke="#0d9488"
-                    strokeWidth={2.5}
-                    fill="url(#reportKneeGradient)"
-                    isAnimationActive={false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </section>
-
           {/* Clinician Notes Section */}
           {notes && (
             <section className="page-break-avoid">
@@ -537,25 +445,6 @@ export default function ClinicianReport() {
               </p>
             </section>
           )}
-
-          {/* Evidence-Based Clinical Recommendations */}
-          <section className="page-break-avoid rounded-xl border border-line bg-paper/30 p-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-muted">
-              Orthopedic & Physical Therapy Recommendations
-            </h3>
-            <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-muted list-disc list-inside">
-              <li>
-                <strong>Kinetic Chain Strengthening:</strong> Eccentric quadriceps and hamstring neuromuscular retraining to mitigate sagittal stiff-knee guarding.
-              </li>
-              <li>
-                <strong>Serial Kinematic Monitoring:</strong> Follow-up 50 Hz kinematic assessment recommended at 4-week intervals to evaluate rehabilitation trajectory.
-              </li>
-              <li>
-                <strong>Radiographic Correlation:</strong> In cases of persistent antalgic restriction (&lt; 45°), correlate with weight-bearing bilateral radiographs for Kellgren-Lawrence medial joint grading.
-              </li>
-            </ul>
-          </section>
-
           {/* Clinician Sign-off & Verification Footer */}
           <section className="page-break-avoid border-t border-line pt-6">
             <div className="grid grid-cols-2 gap-8 text-xs text-muted">

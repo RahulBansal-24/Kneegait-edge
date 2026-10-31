@@ -287,10 +287,10 @@ export class BleService {
     }
     this.lastT = t;
 
-    // Determine gait phase dynamically based on angle and angular velocity
-    if (kneeAngle > 24 || (kneeAngle > 16 && angularVel > 35)) {
+    // Determine gait phase dynamically based on angle and angular velocity (anatomical knee degrees)
+    if (kneeAngle > 26 || (kneeAngle > 18 && angularVel > 35)) {
       this.currentPhase = 'swing';
-    } else if (kneeAngle <= 14 && angularVel < 15) {
+    } else if (kneeAngle <= 22 || (kneeAngle <= 26 && angularVel < 20)) {
       this.currentPhase = 'stance';
     }
 
