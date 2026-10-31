@@ -1,0 +1,46 @@
+{
+    "model_type": "sklearn.ensemble.RandomForestClassifier",
+    "feature_names": [
+        "peak_swing_flexion",
+        "sagittal_rom",
+        "stance_to_swing_ratio",
+        "peak_angular_velocity",
+        "cadence_spm"
+    ],
+    "feature_order": [
+        "peak_swing_flexion",
+        "sagittal_rom",
+        "stance_to_swing_ratio",
+        "peak_angular_velocity",
+        "cadence_spm"
+    ],
+    "num_features": 5,
+    "target_column": "target",
+    "class_names": [
+        "NORMAL_GAIT",
+        "MILD_FUNCTIONAL_RESTRICTION",
+        "SEVERE_ANTALGIC_STIFF_GAIT"
+    ],
+    "class_id_mapping": {
+        "0": "NORMAL_GAIT",
+        "1": "MILD_FUNCTIONAL_RESTRICTION",
+        "2": "SEVERE_ANTALGIC_STIFF_GAIT"
+    },
+    "display_labels": {
+        "0": "Normal / Healthy",
+        "1": "Mild Functional Restriction",
+        "2": "Severe Antalgic / Stiff Gait"
+    },
+    "hyperparameters": {
+        "n_estimators": 20,
+        "max_depth": 5,
+        "class_weight": "balanced",
+        "random_state": 42
+    },
+    "evaluation_metrics": {
+        "test_accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "macro_f1": 1.0
+    },
+    "disclaimer": "Gait pattern classification prototype trained on synthetic data under specified threshold rules (Normal >= 49.4\u00b0, Mild 45.0\u00b0-49.4\u00b0, Severe < 45.0\u00b0). High accuracy reflects consistent learning of these biomechanical rules across the 5 features."
+}

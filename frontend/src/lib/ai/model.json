@@ -1,0 +1,2863 @@
+{
+  "model_type": "RandomForestClassifier",
+  "n_estimators": 20,
+  "max_depth": 5,
+  "features": [
+    "peak_swing_flexion",
+    "sagittal_rom",
+    "stance_to_swing_ratio",
+    "peak_angular_velocity",
+    "cadence_spm"
+  ],
+  "classes": [
+    "NORMAL_GAIT",
+    "MILD_FUNCTIONAL_RESTRICTION",
+    "SEVERE_ANTALGIC_STIFF_GAIT"
+  ],
+  "trees": [
+    [
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.380001068115234,
+        "left": 1,
+        "right": 20
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 39.13999938964844,
+        "left": 2,
+        "right": 7
+      },
+      {
+        "is_leaf": false,
+        "feature": 4,
+        "threshold": 88.95000076293945,
+        "left": 3,
+        "right": 4
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 45.23000144958496,
+        "left": 5,
+        "right": 6
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 40.17500114440918,
+        "left": 8,
+        "right": 13
+      },
+      {
+        "is_leaf": false,
+        "feature": 4,
+        "threshold": 98.25,
+        "left": 9,
+        "right": 12
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 131.40500259399414,
+        "left": 10,
+        "right": 11
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          0.9128687152845512,
+          0.08713128471544881
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 40.34499931335449,
+        "left": 14,
+        "right": 17
+      },
+      {
+        "is_leaf": false,
+        "feature": 4,
+        "threshold": 94.70000076293945,
+        "left": 15,
+        "right": 16
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 44.81999969482422,
+        "left": 18,
+        "right": 19
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    [
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 46.2549991607666,
+        "left": 1,
+        "right": 6
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 44.97999954223633,
+        "left": 2,
+        "right": 3
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 122.31999969482422,
+        "left": 4,
+        "right": 5
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.16999816894531,
+        "left": 7,
+        "right": 8
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    [
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 44.9950008392334,
+        "left": 1,
+        "right": 2
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 46.505001068115234,
+        "left": 3,
+        "right": 6
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.38999938964844,
+        "left": 4,
+        "right": 5
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    [
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 45.0,
+        "left": 1,
+        "right": 2
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.380001068115234,
+        "left": 3,
+        "right": 4
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    [
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 140.93000030517578,
+        "left": 1,
+        "right": 12
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 45.03499984741211,
+        "left": 2,
+        "right": 5
+      },
+      {
+        "is_leaf": false,
+        "feature": 2,
+        "threshold": 1.4089999794960022,
+        "left": 3,
+        "right": 4
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 4,
+        "threshold": 106.45000076293945,
+        "left": 6,
+        "right": 11
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 48.68499946594238,
+        "left": 7,
+        "right": 10
+      },
+      {
+        "is_leaf": false,
+        "feature": 4,
+        "threshold": 76.04999923706055,
+        "left": 8,
+        "right": 9
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 195.11000061035156,
+        "left": 13,
+        "right": 20
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 46.32499885559082,
+        "left": 14,
+        "right": 19
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 39.13999938964844,
+        "left": 15,
+        "right": 16
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 40.01499938964844,
+        "left": 17,
+        "right": 18
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          0.8408180897912865,
+          0.1591819102087135
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0012755637475147868,
+          0.9980711783276368,
+          0.0006532579248484275
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 47.279998779296875,
+        "left": 21,
+        "right": 24
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 37.94499969482422,
+        "left": 22,
+        "right": 23
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    [
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.380001068115234,
+        "left": 1,
+        "right": 16
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 140.7699966430664,
+        "left": 2,
+        "right": 11
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 38.40999984741211,
+        "left": 3,
+        "right": 6
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 30.579999923706055,
+        "left": 4,
+        "right": 5
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 126.36999893188477,
+        "left": 7,
+        "right": 8
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 44.96999931335449,
+        "left": 9,
+        "right": 10
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 39.56500053405762,
+        "left": 12,
+        "right": 13
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 44.974998474121094,
+        "left": 14,
+        "right": 15
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    [
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 39.5,
+        "left": 1,
+        "right": 4
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 45.23000144958496,
+        "left": 2,
+        "right": 3
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.380001068115234,
+        "left": 5,
+        "right": 14
+      },
+      {
+        "is_leaf": false,
+        "feature": 2,
+        "threshold": 1.9300000071525574,
+        "left": 6,
+        "right": 11
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 122.6349983215332,
+        "left": 7,
+        "right": 8
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 44.96999931335449,
+        "left": 9,
+        "right": 10
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 4,
+        "threshold": 96.54999923706055,
+        "left": 12,
+        "right": 13
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    [
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 44.9950008392334,
+        "left": 1,
+        "right": 2
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 195.1050033569336,
+        "left": 3,
+        "right": 18
+      },
+      {
+        "is_leaf": false,
+        "feature": 2,
+        "threshold": 1.5885000228881836,
+        "left": 4,
+        "right": 11
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 178.13999938964844,
+        "left": 5,
+        "right": 8
+      },
+      {
+        "is_leaf": false,
+        "feature": 4,
+        "threshold": 107.5,
+        "left": 6,
+        "right": 7
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.28116054476949526,
+          0.7188394552305047,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          0.6241188027273779,
+          0.3758811972726222,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.420000076293945,
+        "left": 9,
+        "right": 10
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 2,
+        "threshold": 1.6464999914169312,
+        "left": 12,
+        "right": 15
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 182.9250030517578,
+        "left": 13,
+        "right": 14
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.10534135863230631,
+          0.8946586413676937,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.4039531382943909,
+          0.5960468617056092,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 2,
+        "threshold": 1.746500015258789,
+        "left": 16,
+        "right": 17
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.07312322582581543,
+          0.9268767741741846,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.005220439220621915,
+          0.994779560779378,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.375,
+        "left": 19,
+        "right": 20
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    [
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 141.75499725341797,
+        "left": 1,
+        "right": 16
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 39.71000099182129,
+        "left": 2,
+        "right": 11
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 38.584999084472656,
+        "left": 3,
+        "right": 6
+      },
+      {
+        "is_leaf": false,
+        "feature": 4,
+        "threshold": 57.25,
+        "left": 4,
+        "right": 5
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 4,
+        "threshold": 92.0,
+        "left": 7,
+        "right": 10
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 38.60499954223633,
+        "left": 8,
+        "right": 9
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 45.204999923706055,
+        "left": 12,
+        "right": 15
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 44.96999931335449,
+        "left": 13,
+        "right": 14
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.380001068115234,
+        "left": 17,
+        "right": 28
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 154.05500030517578,
+        "left": 18,
+        "right": 25
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 44.96999931335449,
+        "left": 19,
+        "right": 22
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 141.76499938964844,
+        "left": 20,
+        "right": 21
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 2,
+        "threshold": 1.5139999985694885,
+        "left": 23,
+        "right": 24
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 45.010000228881836,
+        "left": 26,
+        "right": 27
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    [
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.380001068115234,
+        "left": 1,
+        "right": 6
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 44.989999771118164,
+        "left": 2,
+        "right": 3
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 2,
+        "threshold": 1.3044999837875366,
+        "left": 4,
+        "right": 5
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    [
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.38999938964844,
+        "left": 1,
+        "right": 6
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 44.9950008392334,
+        "left": 2,
+        "right": 3
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 38.51499938964844,
+        "left": 4,
+        "right": 5
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    [
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.380001068115234,
+        "left": 1,
+        "right": 8
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 44.9950008392334,
+        "left": 2,
+        "right": 5
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 7.674999952316284,
+        "left": 3,
+        "right": 4
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 2,
+        "threshold": 1.32150000333786,
+        "left": 6,
+        "right": 7
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    [
+      {
+        "is_leaf": false,
+        "feature": 2,
+        "threshold": 1.5954999923706055,
+        "left": 1,
+        "right": 14
+      },
+      {
+        "is_leaf": false,
+        "feature": 2,
+        "threshold": 1.512499988079071,
+        "left": 2,
+        "right": 9
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.349998474121094,
+        "left": 3,
+        "right": 8
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 39.295000076293945,
+        "left": 4,
+        "right": 5
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 40.329999923706055,
+        "left": 6,
+        "right": 7
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          0.6576246740999612,
+          0.34237532590003883
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.40999984741211,
+        "left": 10,
+        "right": 13
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 40.40500068664551,
+        "left": 11,
+        "right": 12
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 44.9950008392334,
+        "left": 15,
+        "right": 16
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 45.96000099182129,
+        "left": 17,
+        "right": 20
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 38.51499938964844,
+        "left": 18,
+        "right": 19
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.084999084472656,
+        "left": 21,
+        "right": 22
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    [
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.380001068115234,
+        "left": 1,
+        "right": 6
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 44.9950008392334,
+        "left": 2,
+        "right": 3
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 38.904998779296875,
+        "left": 4,
+        "right": 5
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    [
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 39.204999923706055,
+        "left": 1,
+        "right": 12
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 121.69499969482422,
+        "left": 2,
+        "right": 3
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 121.70499801635742,
+        "left": 4,
+        "right": 7
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 33.09999942779541,
+        "left": 5,
+        "right": 6
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 4,
+        "threshold": 89.04999923706055,
+        "left": 8,
+        "right": 11
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 45.10000038146973,
+        "left": 9,
+        "right": 10
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.380001068115234,
+        "left": 13,
+        "right": 20
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 120.85499954223633,
+        "left": 14,
+        "right": 15
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 44.994998931884766,
+        "left": 16,
+        "right": 17
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 39.29999923706055,
+        "left": 18,
+        "right": 19
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    [
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 141.53499603271484,
+        "left": 1,
+        "right": 22
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 126.92000198364258,
+        "left": 2,
+        "right": 9
+      },
+      {
+        "is_leaf": false,
+        "feature": 2,
+        "threshold": 1.8115000128746033,
+        "left": 3,
+        "right": 6
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 45.239999771118164,
+        "left": 4,
+        "right": 5
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 2,
+        "threshold": 1.8125,
+        "left": 7,
+        "right": 8
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 2,
+        "threshold": 1.897000014781952,
+        "left": 10,
+        "right": 17
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 39.880001068115234,
+        "left": 11,
+        "right": 14
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 45.079999923706055,
+        "left": 12,
+        "right": 13
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 45.260000228881836,
+        "left": 15,
+        "right": 16
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 2,
+        "threshold": 1.9714999794960022,
+        "left": 18,
+        "right": 21
+      },
+      {
+        "is_leaf": false,
+        "feature": 2,
+        "threshold": 1.9699999690055847,
+        "left": 19,
+        "right": 20
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.04966984531331176,
+          0.9503301546866882
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          0.8848335572473504,
+          0.11516644275264964
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 185.72000122070312,
+        "left": 23,
+        "right": 30
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.380001068115234,
+        "left": 24,
+        "right": 29
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 39.204999923706055,
+        "left": 25,
+        "right": 26
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 40.0049991607666,
+        "left": 27,
+        "right": 28
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          0.69144371214078,
+          0.30855628785921996
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          0.9995758733507798,
+          0.00042412664922011564
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.375,
+        "left": 31,
+        "right": 34
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 44.97999954223633,
+        "left": 32,
+        "right": 33
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    [
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 46.2549991607666,
+        "left": 1,
+        "right": 12
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 44.9950008392334,
+        "left": 2,
+        "right": 3
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 45.83500099182129,
+        "left": 4,
+        "right": 9
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 191.36499786376953,
+        "left": 5,
+        "right": 6
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.385000228881836,
+        "left": 7,
+        "right": 8
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 45.85000038146973,
+        "left": 10,
+        "right": 11
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.15999984741211,
+        "left": 13,
+        "right": 14
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    [
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 142.6649932861328,
+        "left": 1,
+        "right": 12
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 45.05000114440918,
+        "left": 2,
+        "right": 3
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 2,
+        "threshold": 1.6660000085830688,
+        "left": 4,
+        "right": 11
+      },
+      {
+        "is_leaf": false,
+        "feature": 2,
+        "threshold": 1.6460000276565552,
+        "left": 5,
+        "right": 8
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 46.19499969482422,
+        "left": 6,
+        "right": 7
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 137.12999725341797,
+        "left": 9,
+        "right": 10
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 46.98499870300293,
+        "left": 13,
+        "right": 24
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 39.93000030517578,
+        "left": 14,
+        "right": 17
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 45.82499885559082,
+        "left": 15,
+        "right": 16
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 2,
+        "threshold": 1.5105000138282776,
+        "left": 18,
+        "right": 21
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.3799991607666,
+        "left": 19,
+        "right": 20
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 4,
+        "threshold": 81.14999771118164,
+        "left": 22,
+        "right": 23
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.02478462699912726,
+          0.9752153730008728,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0004885671186793744,
+          0.9985463325198501,
+          0.0009651003614705682
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    [
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 39.204999923706055,
+        "left": 1,
+        "right": 6
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 45.21500015258789,
+        "left": 2,
+        "right": 3
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 45.56500053405762,
+        "left": 4,
+        "right": 5
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 193.23500061035156,
+        "left": 7,
+        "right": 20
+      },
+      {
+        "is_leaf": false,
+        "feature": 2,
+        "threshold": 1.590499997138977,
+        "left": 8,
+        "right": 13
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.38999938964844,
+        "left": 9,
+        "right": 12
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 39.334999084472656,
+        "left": 10,
+        "right": 11
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          0.9984853274068374,
+          0.0015146725931626738
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 46.03499984741211,
+        "left": 14,
+        "right": 17
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 118.35000228881836,
+        "left": 15,
+        "right": 16
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          0.9979130102974654,
+          0.0020869897025345445
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.03499984741211,
+        "left": 18,
+        "right": 19
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.3799991607666,
+        "left": 21,
+        "right": 22
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    [
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 46.385000228881836,
+        "left": 1,
+        "right": 22
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 142.1500015258789,
+        "left": 2,
+        "right": 11
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 38.584999084472656,
+        "left": 3,
+        "right": 6
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 45.23000144958496,
+        "left": 4,
+        "right": 5
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 3,
+        "threshold": 120.2349967956543,
+        "left": 7,
+        "right": 8
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 45.010000228881836,
+        "left": 9,
+        "right": 10
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 2,
+        "threshold": 1.8044999837875366,
+        "left": 12,
+        "right": 17
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 39.46499824523926,
+        "left": 13,
+        "right": 14
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 40.01499938964844,
+        "left": 15,
+        "right": 16
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          0.6576246740999612,
+          0.34237532590003883
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0008915254813404051,
+          0.999010636083297,
+          9.783843536262058e-05
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 1,
+        "threshold": 39.18000030517578,
+        "left": 18,
+        "right": 19
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 4,
+        "threshold": 101.0,
+        "left": 20,
+        "right": 21
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 2,
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 4,
+        "threshold": 112.45000076293945,
+        "left": 23,
+        "right": 24
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": false,
+        "feature": 0,
+        "threshold": 49.32499885559082,
+        "left": 25,
+        "right": 26
+      },
+      {
+        "is_leaf": true,
+        "class": 1,
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "is_leaf": true,
+        "class": 0,
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      }
+    ]
+  ]
+}

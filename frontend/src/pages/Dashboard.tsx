@@ -1,8 +1,10 @@
-import { Bluetooth, RefreshCw, Unplug } from 'lucide-react';
+import { ArrowRight, Bluetooth, RefreshCw, Sparkles, Unplug } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import AngleGauge from '../components/AngleGauge';
 import RiskBadge from '../components/RiskBadge';
 import WaveformChart from '../components/WaveformChart';
 import { useBle } from '../context/BleContext';
+import { useAiSession } from '../context/AiSessionContext';
 
 const fmt = (v: number | null, unit = '°') => (v === null ? '–' : `${v.toFixed(1)}${unit}`);
 
@@ -17,8 +19,41 @@ function Kpi({ label, value }: { label: string; value: string }) {
 
 export default function Dashboard() {
   const { status, metrics, buffer, connect, disconnect, packetCount, deviceName } = useBle();
+  const {
+    finalResult,
+    status: aiStatus,
+    currentWindowIndex,
+    elapsedSeconds,
+    windowSecondsRemaining,
+  } = useAiSession();
+  const navigate = useNavigate();
+
   const stance = metrics.phase === 'stance';
   const isConnected = status === 'connected';
+
+  const getAiBadgeTheme = (classId: number) => {
+    switch (classId) {
+      case 0:
+        return 'border-emerald-200 bg-emerald-50 text-emerald-800';
+      case 1:
+        return 'border-amber-200 bg-amber-50 text-amber-800';
+      case 2:
+      default:
+        return 'border-rose-200 bg-rose-50 text-rose-800';
+    }
+  };
+
+  const getAiDotTheme = (classId: number) => {
+    switch (classId) {
+      case 0:
+        return 'bg-emerald-500';
+      case 1:
+        return 'bg-amber-500';
+      case 2:
+      default:
+        return 'bg-rose-500';
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -61,6 +96,81 @@ export default function Dashboard() {
           )}
         </div>
       </header>
+
+      {/* Final AI Analysis Result Bar (Appears when completed) */}
+      {finalResult && (
+        <section className="rounded-xl border border-line bg-white p-4 shadow-sm transition-all animate-fade-in">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ink text-white shadow-sm">
+                <Sparkles size={18} className="text-teal-400" />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+                    AI Analysis Completed
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold ${getAiBadgeTheme(
+                      finalResult.finalClassId
+                    )}`}
+                  >
+                    <span
+                      className={`h-2 w-2 rounded-full ${getAiDotTheme(
+                        finalResult.finalClassId
+                      )}`}
+                    />
+                    {finalResult.finalDisplayLabel} · {finalResult.overallConfidence}%
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-600 line-clamp-1 sm:line-clamp-none">
+                  {finalResult.finalDescription}
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted">
+                  Based on completed 3-minute session ({finalResult.validWindowCount} of {finalResult.totalWindows} windows evaluated) · Completed at {finalResult.completedAt}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => navigate('/analytics')}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-paper px-3.5 py-2 text-xs font-semibold text-ink shadow-sm hover:bg-slate-100 transition"
+            >
+              <span>View Detailed AI Log</span>
+              <ArrowRight size={14} />
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* AI Analysis Active Progress Bar (Visible while 3-minute analysis is running) */}
+      {aiStatus === 'running' && (
+        <section className="rounded-xl border border-teal-200 bg-teal-50/60 p-3.5 shadow-sm transition-all">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-600 text-white">
+                <RefreshCw size={15} className="animate-spin" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-teal-900">
+                  AI Analysis Running: Window {currentWindowIndex} of 6
+                </p>
+                <p className="text-[11px] text-teal-700">
+                  Elapsed: {Math.floor(elapsedSeconds / 60)}:{(elapsedSeconds % 60).toString().padStart(2, '0')} / 03:00 · Next prediction in {windowSecondsRemaining}s
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => navigate('/analytics')}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-teal-800 hover:text-teal-950 underline underline-offset-2"
+            >
+              <span>Inspect AI Log</span>
+              <ArrowRight size={13} />
+            </button>
+          </div>
+        </section>
+      )}
 
       <RiskBadge peak={metrics.lastPeak} />
 

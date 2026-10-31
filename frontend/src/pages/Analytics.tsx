@@ -24,6 +24,7 @@ import {
 } from 'recharts';
 import { useBle } from '../context/BleContext';
 import type { BleGaitSample } from '../lib/bleService';
+import AiAnalysisLogSection from '../components/AiAnalysisLogSection';
 
 type ChartPoint = {
   time: number;
@@ -269,6 +270,9 @@ export default function Analytics() {
           </button>
         </div>
       </section>
+
+      {/* AI Analysis Log: 3-Minute Assessment and Random Forest Inference */}
+      <AiAnalysisLogSection />
 
       {/* Metrics overview */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

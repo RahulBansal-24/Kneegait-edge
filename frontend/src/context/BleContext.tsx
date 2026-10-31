@@ -31,6 +31,7 @@ interface BleContextValue {
   connect: () => Promise<void>;
   disconnect: () => void;
   logs: string[];
+  subscribe: (callback: (sample: BleGaitSample) => void) => () => void;
 }
 
 const initialMetrics: GaitMetrics = {
@@ -65,6 +66,7 @@ export function BleProvider({ children }: { children: React.ReactNode }) {
   ]);
 
   const buffer = useRef<BleGaitSample[]>([]);
+  const sampleListeners = useRef<Set<(sample: BleGaitSample) => void>>(new Set());
   const maxLen = THRESHOLDS.strideWindowSec * THRESHOLDS.sampleRateHz;
 
   // Gait feature tracking variables
@@ -80,6 +82,13 @@ export function BleProvider({ children }: { children: React.ReactNode }) {
     setLogs((prev) => [`${time}  ${msg}`, ...prev].slice(0, 10));
   };
 
+  const subscribe = (callback: (sample: BleGaitSample) => void) => {
+    sampleListeners.current.add(callback);
+    return () => {
+      sampleListeners.current.delete(callback);
+    };
+  };
+
   const connect = async () => {
     setErrorMessage(null);
     addLog('Requesting Bluetooth device pairing…');
@@ -91,6 +100,15 @@ export function BleProvider({ children }: { children: React.ReactNode }) {
           const buf = buffer.current;
           buf.push(sample);
           if (buf.length > maxLen) buf.shift();
+
+          // Dispatch to active subscribers (e.g. AI session pipeline)
+          for (const listener of sampleListeners.current) {
+            try {
+              listener(sample);
+            } catch (err) {
+              console.error('Error in sample subscriber:', err);
+            }
+          }
 
           // Gait segmentation
           if (sample.phase === 'swing') {
@@ -188,6 +206,7 @@ export function BleProvider({ children }: { children: React.ReactNode }) {
         connect,
         disconnect,
         logs,
+        subscribe,
       }}
     >
       {children}

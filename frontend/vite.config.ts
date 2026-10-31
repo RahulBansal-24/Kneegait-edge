@@ -15,6 +15,8 @@ export default defineConfig({
       },
       includeAssets: [
         'favicon.svg',
+        'model.json',
+        'model_metadata.json',
         'icons/apple-touch-icon.png',
         'icons/pwa-192x192.png',
         'icons/pwa-512x512.png',
@@ -49,7 +51,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,json}'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\/.*/i,
