@@ -24,7 +24,9 @@ const NAV = [
 ];
 
 export default function App() {
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [installPrompt, setInstallPrompt] = useState<any>(
+    () => (typeof window !== 'undefined' ? (window as any).__deferredPrompt : null)
+  );
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
@@ -38,6 +40,7 @@ export default function App() {
 
     const handler = (e: Event) => {
       e.preventDefault();
+      (window as any).__deferredPrompt = e;
       setInstallPrompt(e);
     };
 
@@ -45,22 +48,36 @@ export default function App() {
     window.addEventListener('appinstalled', () => {
       setIsInstalled(true);
       setInstallPrompt(null);
+      (window as any).__deferredPrompt = null;
     });
 
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
   const handleInstallClick = async () => {
-    if (installPrompt) {
-      installPrompt.prompt();
-      const { outcome } = await installPrompt.userChoice;
+    let promptEvent = installPrompt || (window as any).__deferredPrompt;
+    if (!promptEvent) {
+      promptEvent = await new Promise((resolve) => {
+        const timer = setTimeout(() => resolve(null), 1200);
+        window.addEventListener(
+          'beforeinstallprompt',
+          (e) => {
+            clearTimeout(timer);
+            resolve(e);
+          },
+          { once: true }
+        );
+      });
+    }
+
+    if (promptEvent) {
+      promptEvent.prompt();
+      const { outcome } = await promptEvent.userChoice;
       if (outcome === 'accepted') {
         setInstallPrompt(null);
+        (window as any).__deferredPrompt = null;
+        setIsInstalled(true);
       }
-    } else {
-      alert(
-        "To install on your phone:\n\n1. Tap the three dots (⋮) in Chrome at top-right.\n2. Tap 'Add to Home screen' or 'Install app'."
-      );
     }
   };
 
