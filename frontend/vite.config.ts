@@ -3,55 +3,63 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  server: {
+    allowedHosts: true,
+  },
   plugins: [
     react(),
     VitePWA({
-      // 'prompt': a new version is only applied when the user taps "Reload".
-      // This avoids silently reloading the page in the middle of a live Bluetooth session.
-      registerType: 'prompt',
-      // Registration is done in src/components/PwaStatus.tsx (useRegisterSW).
-      injectRegister: false,
-      includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
+      registerType: 'autoUpdate',
+      devOptions: {
+        enabled: false,
+      },
+      includeAssets: [
+        'favicon.svg',
+        'icons/apple-touch-icon.png',
+        'icons/pwa-192x192.png',
+        'icons/pwa-512x512.png',
+      ],
       manifest: {
-        id: '/',
-        name: 'KneeGait-Edge | Clinical Companion',
+        name: 'KneeGait-Edge | Clinical Gait Companion',
         short_name: 'KneeGait',
-        description: 'Clinical companion for real-time knee gait monitoring from a Bluetooth wearable.',
-        lang: 'en',
-        start_url: '/',
-        scope: '/',
+        description: 'Edge-AI Biomechanical Wearable for Knee Kinematics & Stiff-Gait Detection',
+        theme_color: '#0F172A',
+        background_color: '#F8FAFC',
         display: 'standalone',
         orientation: 'any',
-        theme_color: '#14213D',
-        background_color: '#F5F8F9',
-        categories: ['health', 'medical'],
+        start_url: '/',
+        scope: '/',
         icons: [
-          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          {
+            src: '/icons/pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: '/icons/pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+          },
+          {
+            src: '/icons/pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable',
+          },
         ],
       },
       workbox: {
-        // Pre-cache the whole app shell (HTML, JS, CSS, icons) so the app opens offline.
-        globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'],
-        // Any page navigation (e.g. a reload on /analytics) is answered with the cached SPA shell.
-        navigateFallback: '/index.html',
-        cleanupOutdatedCaches: true,
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
-          // Google Fonts stylesheet (small, may change): serve cached, refresh in background.
           {
-            urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com',
-            handler: 'StaleWhileRevalidate',
-            options: { cacheName: 'google-fonts-styles' },
-          },
-          // Font files are immutable: cache first.
-          {
-            urlPattern: ({ url }) => url.origin === 'https://fonts.gstatic.com',
+            urlPattern: /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'google-fonts-files',
-              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] },
+              cacheName: 'google-fonts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+              },
             },
           },
         ],
