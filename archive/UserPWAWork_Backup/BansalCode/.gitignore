@@ -1,0 +1,18 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Temporary / build scripts
+build_and_run_notebook.py
+
+# Auxiliary evaluation and statistics artifacts
+class_statistics.csv
+classification_report.csv
+confusion_matrix.csv
+confusion_matrix.png
+feature_importance.csv
+feature_importance.png
