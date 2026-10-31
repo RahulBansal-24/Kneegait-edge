@@ -1,10 +1,10 @@
 import { MutableRefObject, useEffect, useRef } from 'react';
-import type { GaitSample } from '../lib/mockGaitStream';
+import type { BleGaitSample } from '../lib/bleService';
 import { THRESHOLDS } from '../lib/thresholds';
 
 const Y_MAX = 80;
 
-export default function WaveformChart({ buffer }: { buffer: MutableRefObject<GaitSample[]> }) {
+export default function WaveformChart({ buffer }: { buffer: MutableRefObject<BleGaitSample[]> }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {

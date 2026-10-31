@@ -1,7 +1,9 @@
 import { Activity, BarChart3, Bluetooth, FileText, Settings as SettingsIcon } from 'lucide-react';
 import { NavLink, Route, Routes } from 'react-router-dom';
+import { BleProvider } from './context/BleContext';
 import Analytics from './pages/Analytics';
 import ClinicianReport from './pages/ClinicianReport';
+import PwaStatus from './components/PwaStatus';
 import ConnectModal from './pages/ConnectModal';
 import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
@@ -16,7 +18,8 @@ const NAV = [
 
 export default function App() {
   return (
-    <div className="min-h-screen lg:flex">
+    <BleProvider>
+      <div className="min-h-screen lg:flex">
       <nav className="flex gap-1 border-b border-line bg-white p-3 lg:w-56 lg:flex-col lg:border-b-0 lg:border-r lg:p-4">
         <p className="mb-0 hidden px-3 py-2 text-lg font-semibold lg:mb-4 lg:block">KneeGait-Edge</p>
         {NAV.map(({ to, label, icon: Icon }) => (
@@ -45,5 +48,7 @@ export default function App() {
         </Routes>
       </main>
     </div>
+      <PwaStatus />
+    </BleProvider>
   );
 }

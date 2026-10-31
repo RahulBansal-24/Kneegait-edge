@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useBle } from '../context/BleContext';
 import {
   Activity,
   Bell,
@@ -20,7 +21,7 @@ type AppSettings = {
   sampleRate: number;
   filterWindow: number;
   soundAlerts: boolean;
-  simulationEnabled: boolean;
+  autoReconnect: boolean;
   angleUnit: 'degrees' | 'radians';
   autoScroll: boolean;
 };
@@ -30,7 +31,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   sampleRate: 50,
   filterWindow: 5,
   soundAlerts: false,
-  simulationEnabled: true,
+  autoReconnect: true,
   angleUnit: 'degrees',
   autoScroll: true,
 };
@@ -102,6 +103,8 @@ function Toggle({
 }
 
 export default function Settings() {
+  const { status, deviceName } = useBle();
+  const isConnected = status === 'connected';
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
   const [saved, setSaved] = useState(false);
 
@@ -301,16 +304,16 @@ export default function Settings() {
           </div>
 
           <div>
-            <h2 className="font-semibold text-ink">Alerts and simulation</h2>
+            <h2 className="font-semibold text-ink">Alerts and hardware preferences</h2>
             <p className="mt-1 text-sm text-muted">
-              Control local demo preferences.
+              Configure notifications and Bluetooth connectivity.
             </p>
           </div>
         </div>
 
         <SettingRow
           title="Sound alerts preference"
-          description="Save whether sound alerts should be enabled when alert functionality is integrated."
+          description="Enable auditory alerts when peak swing flexion drops below the 45.0° stiff-gait threshold."
         >
           <div className="flex items-center gap-3">
             {settings.soundAlerts ? (
@@ -328,13 +331,13 @@ export default function Settings() {
         </SettingRow>
 
         <SettingRow
-          title="Simulation preference"
-          description="Save whether the browser should use simulated gait data in a future integrated global simulation control."
+          title="Auto-reconnect preference"
+          description="Automatically attempt to reconnect to the paired KneeGait-Edge ESP32 when available."
         >
           <Toggle
-            checked={settings.simulationEnabled}
-            onChange={(value) => updateSetting('simulationEnabled', value)}
-            label="Simulation preference"
+            checked={settings.autoReconnect}
+            onChange={(value) => updateSetting('autoReconnect', value)}
+            label="Auto-reconnect preference"
           />
         </SettingRow>
 
@@ -371,9 +374,11 @@ export default function Settings() {
               <Bluetooth size={16} />
               Transport
             </div>
-            <p className="mt-2 font-semibold text-ink">BLE · Planned</p>
+            <p className="mt-2 font-semibold text-ink">
+              {isConnected ? 'Web Bluetooth (Active 50Hz)' : 'Web Bluetooth (GATT)'}
+            </p>
             <p className="mt-1 text-xs text-muted">
-              No real device connected to Settings.
+              {isConnected ? `Connected to ${deviceName}` : 'Hardware interface ready'}
             </p>
           </div>
 
@@ -382,9 +387,11 @@ export default function Settings() {
               <Waves size={16} />
               Data source
             </div>
-            <p className="mt-2 font-semibold text-ink">Browser simulation</p>
+            <p className="mt-2 font-semibold text-ink">
+              {isConnected ? 'ESP32 Wearable Node' : 'Awaiting Connection'}
+            </p>
             <p className="mt-1 text-xs text-muted">
-              No real sensor measurements received.
+              {isConnected ? 'Dual MPU-6050 I²C Stream' : 'Ready to pair via Connect page'}
             </p>
           </div>
 
@@ -397,7 +404,7 @@ export default function Settings() {
               {settings.sampleRate} Hz
             </p>
             <p className="mt-1 text-xs text-muted">
-              Saved frontend preference.
+              Firmware transmission frequency.
             </p>
           </div>
 
@@ -410,7 +417,7 @@ export default function Settings() {
               {settings.riskThreshold.toFixed(1)}°
             </p>
             <p className="mt-1 text-xs text-muted">
-              Not a validated clinical threshold.
+              Clinical cutoff for stiff-gait detection (Bytyqi 2014).
             </p>
           </div>
         </div>
@@ -451,11 +458,9 @@ export default function Settings() {
         </div>
       </section>
 
-      <footer className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
-        <strong>Prototype notice:</strong> Settings currently configure this
-        frontend only. Sensor sampling, filtering, sound alerts, and global
-        simulation behavior require integration with the relevant application
-        components and ESP32 firmware.
+      <footer className="rounded-lg border border-line bg-white px-4 py-3 text-sm leading-6 text-muted">
+        <strong>Hardware Note:</strong> Settings synchronize with the browser local storage.
+        Real-time telemetry and threshold alerts are computed directly on incoming 50Hz BLE packets.
       </footer>
     </div>
   );

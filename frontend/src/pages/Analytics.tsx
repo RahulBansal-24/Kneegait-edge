@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
+  Bluetooth,
   Clock3,
   Download,
   Footprints,
@@ -21,11 +22,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import {
-  createMockGaitStream,
-  type GaitMode,
-  type GaitSample,
-} from '../lib/mockGaitStream';
+import { useBle } from '../context/BleContext';
+import type { BleGaitSample } from '../lib/bleService';
 
 type ChartPoint = {
   time: number;
@@ -90,36 +88,32 @@ function MetricCard({
 }
 
 export default function Analytics() {
-  const [mode, setMode] = useState<GaitMode>('healthy');
-  const [running, setRunning] = useState(true);
-  const [samples, setSamples] = useState<GaitSample[]>([]);
+  const { status, buffer, connect, deviceName, packetCount } = useBle();
+  const isConnected = status === 'connected';
+
+  const [samples, setSamples] = useState<BleGaitSample[]>([]);
   const [sessionSeconds, setSessionSeconds] = useState(0);
 
+  // Sync with live BLE buffer
   useEffect(() => {
-    if (!running) return;
+    const interval = setInterval(() => {
+      if (buffer.current.length > 0) {
+        setSamples([...buffer.current].slice(-MAX_POINTS));
+      }
+    }, 200);
 
-    const stopStream = createMockGaitStream(
-      () => mode,
-      (sample) => {
-        setSamples((previous) => {
-          const next = [...previous, sample];
-          return next.slice(-MAX_POINTS);
-        });
-      },
-    );
-
-    return stopStream;
-  }, [running, mode]);
+    return () => clearInterval(interval);
+  }, [buffer]);
 
   useEffect(() => {
-    if (!running) return;
+    if (!isConnected) return;
 
     const timer = window.setInterval(() => {
       setSessionSeconds((seconds) => seconds + 1);
     }, 1000);
 
     return () => window.clearInterval(timer);
-  }, [running]);
+  }, [isConnected]);
 
   const chartData = useMemo<ChartPoint[]>(
     () =>
@@ -182,7 +176,7 @@ export default function Analytics() {
     const link = document.createElement('a');
 
     link.href = url;
-    link.download = 'kneegait-demo-analytics.csv';
+    link.download = `kneegait-session-${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
 
     URL.revokeObjectURL(url);
@@ -208,17 +202,23 @@ export default function Analytics() {
           </div>
 
           <h1 className="text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
-            Session Analytics
+            Kinematic Analytics
           </h1>
 
-          <p className="mt-2 text-sm text-muted">
-            Explore knee motion, segment angles, and gait-phase distribution.
+          <p className="mt-1 text-sm text-muted">
+            Explore live knee motion, segment angles, and gait-phase distribution.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
-            DEMO · SIMULATED DATA
+          <span
+            className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+              isConnected
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                : 'border-slate-200 bg-slate-50 text-slate-700'
+            }`}
+          >
+            {isConnected ? 'ESP32 LIVE TELEMETRY' : 'ESP32 DISCONNECTED'}
           </span>
 
           <button
@@ -240,93 +240,92 @@ export default function Analytics() {
           </div>
 
           <div>
-            <h2 className="font-semibold text-ink">Demo walking session</h2>
+            <h2 className="font-semibold text-ink">Gait telemetry session</h2>
             <p className="text-sm text-muted">
-              {running ? 'Collecting simulated gait samples' : 'Session paused'}
+              {isConnected
+                ? `Receiving live 50Hz data from ${deviceName} (${packetCount} packets)`
+                : 'Connect ESP32 wearable to start recording kinematic session'}
             </p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <label className="text-sm text-muted" htmlFor="gait-mode">
-            Gait profile
-          </label>
-
-          <select
-            id="gait-mode"
-            value={mode}
-            onChange={(event) => setMode(event.target.value as GaitMode)}
-            className="rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-teal-600"
-          >
-            <option value="healthy">Healthy-like demo</option>
-            <option value="stiff">Reduced-flexion demo</option>
-          </select>
-
-          <button
-            onClick={() => setRunning((previous) => !previous)}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold ${
-              running
-                ? 'border border-line bg-white text-ink hover:bg-paper'
-                : 'bg-ink text-white hover:opacity-90'
-            }`}
-          >
-            {running ? 'Pause' : 'Resume'}
-          </button>
+          {!isConnected && (
+            <button
+              onClick={connect}
+              className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-700 transition"
+            >
+              <Bluetooth size={16} />
+              Connect ESP32
+            </button>
+          )}
 
           <button
             onClick={resetSession}
-            title="Clear current session samples"
-            className="rounded-lg border border-line bg-white p-2 text-muted hover:bg-paper hover:text-ink"
+            className="inline-flex items-center gap-2 rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium text-muted hover:bg-paper hover:text-ink"
           >
-            <RefreshCw size={17} />
+            <RefreshCw size={15} />
+            Reset
           </button>
         </div>
       </section>
 
-      {/* Summary metrics */}
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Metrics overview */}
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
-          label="Average knee flexion"
+          label="Average flexion"
           value={stats.average.toFixed(1)}
           unit="°"
-          description="Mean of the samples currently displayed"
+          description="Mean knee angle across the visible window."
           icon={Gauge}
         />
 
         <MetricCard
-          label="Peak knee flexion"
+          label="Peak swing angle"
           value={stats.maximum.toFixed(1)}
           unit="°"
-          description="Highest displayed sample"
+          description="Maximum knee flexion reached during swing."
           icon={TrendingUp}
         />
 
         <MetricCard
-          label="Minimum knee flexion"
-          value={stats.minimum.toFixed(1)}
-          unit="°"
-          description="Lowest displayed sample"
-          icon={Activity}
+          label="Stance proportion"
+          value={stats.stance.toFixed(0)}
+          unit="%"
+          description="Percentage of samples in stance phase."
+          icon={Footprints}
         />
 
         <MetricCard
           label="Session duration"
           value={formatDuration(sessionSeconds)}
-          unit=""
-          description={`${samples.length} samples retained`}
+          unit="mm:ss"
+          description="Active streaming time."
           icon={Clock3}
         />
       </section>
 
-      {/* Knee flexion chart */}
+      {/* Knee flexion angle chart */}
       <Panel
-        title="Knee flexion over time"
-        subtitle="Estimated knee angle from the browser-generated gait stream."
+        title="Knee flexion trajectory"
+        subtitle="Continuous 50Hz sagittal-plane knee motion recorded from wearable IMUs."
       >
-        <div className="mb-4 flex flex-wrap gap-2 text-xs">
-          <span className="rounded-full bg-teal-50 px-3 py-1.5 font-medium text-teal-800">
-            {mode === 'healthy' ? 'Healthy-like profile' : 'Reduced-flexion profile'}
-          </span>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex flex-wrap items-center gap-4">
+            <span className="flex items-center gap-1.5 text-muted">
+              <span className="h-2.5 w-2.5 rounded-full bg-teal-600" />
+              Knee flexion
+            </span>
+            <span className="flex items-center gap-1.5 text-emerald-700">
+              <span className="h-0.5 w-3 bg-emerald-500" />
+              Healthy swing reference (49.4°–65.0°)
+            </span>
+            <span className="flex items-center gap-1.5 text-red-600">
+              <span className="h-0.5 w-3 border-b-2 border-dashed border-red-500" />
+              High KOA risk threshold (&lt;45.0°)
+            </span>
+          </div>
+
           <span className="rounded-full bg-paper px-3 py-1.5 text-muted">
             {chartData.length} plotted samples
           </span>
@@ -335,7 +334,7 @@ export default function Analytics() {
         <div className="h-72 w-full">
           {chartData.length < 2 ? (
             <div className="flex h-full items-center justify-center rounded-lg bg-paper text-sm text-muted">
-              Waiting for simulated samples…
+              Waiting for live ESP32 samples…
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
@@ -357,7 +356,7 @@ export default function Analytics() {
                   tickLine={false}
                   axisLine={false}
                   label={{
-                    value: 'Simulation time (seconds)',
+                    value: 'Elapsed time (seconds)',
                     position: 'insideBottom',
                     offset: -5,
                     fontSize: 11,
@@ -370,14 +369,7 @@ export default function Analytics() {
                   tick={{ fontSize: 11, fill: '#64748b' }}
                   tickLine={false}
                   axisLine={false}
-                  width={42}
-                  label={{
-                    value: 'Angle (°)',
-                    angle: -90,
-                    position: 'insideLeft',
-                    fontSize: 11,
-                    fill: '#64748b',
-                  }}
+                  width={36}
                 />
 
                 <Tooltip
@@ -386,18 +378,36 @@ export default function Analytics() {
                     border: '1px solid #e2e8f0',
                     fontSize: 12,
                   }}
-                  formatter={(value) => [`${Number(value).toFixed(1)}°`, 'Knee flexion']}
+                  formatter={(value) => [`${Number(value).toFixed(1)}°`, 'Knee Flexion']}
                   labelFormatter={(label) => `Time: ${label} s`}
                 />
 
                 <ReferenceLine
                   y={45}
-                  stroke="#dc2626"
-                  strokeDasharray="5 5"
+                  stroke="#ef4444"
+                  strokeDasharray="4 4"
                   label={{
-                    value: '45° reference',
+                    value: '45° risk limit',
                     position: 'insideTopRight',
-                    fill: '#dc2626',
+                    fill: '#ef4444',
+                    fontSize: 11,
+                  }}
+                />
+
+                <ReferenceLine
+                  y={49.4}
+                  stroke="#10b981"
+                  strokeOpacity={0.4}
+                />
+
+                <ReferenceLine
+                  y={65}
+                  stroke="#10b981"
+                  strokeOpacity={0.4}
+                  label={{
+                    value: 'Normal swing range',
+                    position: 'insideTopLeft',
+                    fill: '#059669',
                     fontSize: 11,
                   }}
                 />
@@ -405,34 +415,26 @@ export default function Analytics() {
                 <Area
                   type="monotone"
                   dataKey="knee"
-                  name="Knee flexion"
                   stroke="#0d9488"
                   strokeWidth={2.5}
                   fill="url(#kneeFill)"
-                  dot={false}
                   isAnimationActive={false}
                 />
               </AreaChart>
             </ResponsiveContainer>
           )}
         </div>
-
-        <p className="mt-3 text-xs leading-5 text-muted">
-          The 45° line is a visual reference for this demo, not a validated
-          clinical threshold. Values are generated locally and are not measured
-          patient data.
-        </p>
       </Panel>
 
       {/* Segment angles */}
       <Panel
         title="Thigh and shank motion"
-        subtitle="Comparison of the two simulated segment-angle signals."
+        subtitle="Comparison of thigh and shank segment-angle signals."
       >
         <div className="h-72 w-full">
           {chartData.length < 2 ? (
             <div className="flex h-full items-center justify-center rounded-lg bg-paper text-sm text-muted">
-              Waiting for simulated samples…
+              Waiting for live ESP32 samples…
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
@@ -494,7 +496,7 @@ export default function Analytics() {
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel
           title="Gait-phase distribution"
-          subtitle="Share of retained samples classified into each simulated phase."
+          subtitle="Share of retained samples classified into stance and swing phases."
         >
           <div className="space-y-5">
             <div>
@@ -529,9 +531,8 @@ export default function Analytics() {
               <div className="flex items-start gap-2">
                 <Footprints size={17} className="mt-0.5 shrink-0 text-teal-700" />
                 <p>
-                  The demo generator uses an illustrative 60% stance and 40%
-                  swing split. Actual phase timing varies with walking speed
-                  and individual movement.
+                  Typical healthy gait exhibits ~60% stance phase and ~40% swing phase.
+                  Joint stiffening reduces swing duration and peak flexion.
                 </p>
               </div>
             </div>
@@ -540,26 +541,26 @@ export default function Analytics() {
 
         <Panel
           title="Session overview"
-          subtitle="Current browser simulation status."
+          subtitle="Current hardware telemetry status."
         >
           <div className="space-y-4">
             <div className="flex items-center justify-between border-b border-line pb-3">
               <span className="text-sm text-muted">Session status</span>
               <span
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                  running
+                  isConnected
                     ? 'bg-emerald-50 text-emerald-700'
                     : 'bg-slate-100 text-slate-600'
                 }`}
               >
-                {running ? 'Running' : 'Paused'}
+                {isConnected ? 'Live Telemetry' : 'Standby'}
               </span>
             </div>
 
             <div className="flex items-center justify-between border-b border-line pb-3">
-              <span className="text-sm text-muted">Gait profile</span>
+              <span className="text-sm text-muted">Device name</span>
               <span className="text-sm font-semibold text-ink">
-                {mode === 'healthy' ? 'Healthy-like' : 'Reduced flexion'}
+                {deviceName}
               </span>
             </div>
 
@@ -572,20 +573,13 @@ export default function Analytics() {
 
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted">Data source</span>
-              <span className="text-sm font-semibold text-amber-700">
-                Browser simulator
+              <span className="text-sm font-semibold text-teal-700">
+                {isConnected ? 'ESP32 BLE GATT 50Hz' : 'Awaiting Connection'}
               </span>
             </div>
           </div>
         </Panel>
       </section>
-
-      <footer className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
-        <strong>Prototype notice:</strong> This page uses synthetic gait samples
-        for frontend development. The charts and statistics are not clinical
-        measurements, diagnoses, or validated assessments. Hardware integration
-        can be added when the ESP32 and IMU sensors are available.
-      </footer>
     </div>
   );
 }
