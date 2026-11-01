@@ -275,8 +275,11 @@ Diagnostic classification categories:
 kneegait-edge/
 ├── README.md                                                  # Comprehensive project documentation (this file)
 ├── .gitignore                                                 # Global git ignore configuration
+├── package.json                                               # Monorepo root scripts & configuration
+├── vercel.json                                                # Cloud deployment configuration
 ├── KneeGait-Edge Pitch Deck.pdf                               # Project presentation deck (PDF)
 ├── KneeGait-Edge Pitch Deck.pptx                              # Project presentation deck (PowerPoint)
+├── KneeGait_Edge_Code_Review_and_Project_Summary.docx        # Project executive summary & architecture review
 │
 ├── backend/                                                   # AI, Machine Learning & Embedded C Pipeline
 │   ├── README.md                                              # Backend & model deployment documentation
@@ -304,9 +307,13 @@ kneegait-edge/
 │   ├── tsconfig.json                                          # TypeScript compiler configuration
 │   ├── tailwind.config.js                                     # Tailwind CSS styling configuration
 │   ├── postcss.config.js                                      # PostCSS processor configuration
+│   ├── vercel.json                                            # Frontend deployment routing rules
 │   ├── .gitignore                                             # Frontend-specific ignore file
-│   ├── public/                                                # Static web assets
-│   │   └── favicon.svg                                        # Application branding icon
+│   ├── public/                                                # Static web & PWA assets (manifest, icons)
+│   │   ├── favicon.svg                                        # Application branding icon
+│   │   ├── model.json                                         # Offline model asset
+│   │   ├── model_metadata.json                                # Offline model metadata
+│   │   └── icons/                                             # PWA manifest icons (192x192, 512x512)
 │   └── src/                                                   # React application source code
 │       ├── main.tsx                                           # React DOM mounting entry point
 │       ├── App.tsx                                            # Main layout, router & navigation
@@ -337,6 +344,17 @@ kneegait-edge/
 │           ├── Analytics.tsx                                  # Session statistics & segment decomposition
 │           ├── ClinicianReport.tsx                            # Clinical report generator & PDF documentation
 │           └── Settings.tsx                                   # Patient profile & system configuration
+│
+├── hardware/                                                  # Hardware Schematics & Mechanical Assembly
+│   ├── guides/                                                # Build guides & wearable mounting manual
+│   │   └── KneeGait_Edge_Hardware_Build_Guide.pdf             # Complete hardware fabrication & assembly manual
+│   └── schematics/                                            # Sensor placement diagrams & schematics
+│       └── anatomical_placement.png                           # Anatomical tibial shank mounting guide
+│
+├── research papers/                                           # Academic & Clinical Biomechanics Literature
+│   ├── Bytyqi_Int_Orthop_2014.pdf                             # Clinical KOA 3D gait kinematics benchmark
+│   ├── sensors-24-00695-v2.pdf                                # IMU dynamic calibration & knee angle fusion
+│   └── 2025.10.20.25338317v1.full.pdf                         # Mocap parity validation with body-worn IMUs
 │
 └── screenshots/                                               # High-Resolution Application Screenshots
     ├── 1) dashboard.png                                       # Figure 1: Real-time Live Gait Dashboard
