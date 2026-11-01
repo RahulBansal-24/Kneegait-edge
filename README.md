@@ -173,7 +173,7 @@ The algorithmic pipeline of KneeGait-Edge translates raw IMU accelerations and a
 ### 1. Single-IMU Biomechanical Transfer Function
 When wearing a single IMU on the tibial shank, the sensor measures absolute segment inclination relative to vertical ($\theta_{\text{shank}}$) rather than relative anatomical joint flexion. In normal human gait (Perry, 1992; Winter, 2009; Bytyqi et al., 2014), the forward inclination of the thigh and backward excursion of the shank operate in coupled harmonic motion during the swing phase:
 
-$$\theta_{\text{knee\_anatomical}}(t) = |\theta_{\text{thigh}}(t) - \theta_{\text{shank}}(t)| \approx K_{\text{transfer}} \times \theta_{\text{shank}}(t)$$
+$$\theta_{\text{knee, anatomical}}(t) = |\theta_{\text{thigh}}(t) - \theta_{\text{shank}}(t)| \approx K_{\text{transfer}} \times \theta_{\text{shank}}(t)$$
 
 where:
 $$K_{\text{transfer}} = 2.15$$
